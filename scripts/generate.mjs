@@ -34,6 +34,9 @@ const argv = process.argv.slice(2);
 const SKELETON = argv.includes("--skeleton");
 const NO_LLM = argv.includes("--no-llm") || SKELETON;
 const NO_ZIP = argv.includes("--no-zip") || SKELETON;
+// Auto-launch Obsidian on the finished vault (the "bloom" trophy moment).
+// Suppressed for skeleton builds and via --no-open (used in perf-only test loops).
+const NO_OPEN = argv.includes("--no-open") || SKELETON;
 const positional = argv.filter((a) => !a.startsWith("--"));
 
 let industry, teamSize, focus;
@@ -168,6 +171,17 @@ function fallbackData() {
       when_to_invoke: "Decisions about process, hiring, vendor commitments, or expansion pace.",
       core_method: "Asks what breaks first at double the current volume, insists on a single owner and a single metric per initiative, and always prefers a small reversible step over a large irreversible bet.",
     },
+    decision_types: [
+      "Pricing and promotion",
+      "Channel or market expansion",
+      "Vendor and platform commitments",
+    ],
+    stakeholders: ["Board", "Team", "Customers"],
+    okr_examples: [
+      "Grow revenue run-rate 20% this quarter",
+      "Cut the order-to-cash cycle by five days",
+      "Reach 100% of consequential decisions logged",
+    ],
   };
 }
 
@@ -190,6 +204,9 @@ decisions:5 of {title,context<=10w,options:3 of str<=5w,choice<=7w,rationale<=10
 meetings:4 of {title,type,attendees:2-3 of str,notes<=12w}, inbox_rules:5 of str<=10w,
 memory:{quarter_focus<=16w,urgent:3 of str<=10w,team_deployment:3 of str<=10w,recent_decisions:3 of str<=10w},
 intel_sections:8 of str<=6w,
+decision_types:3 of str<=5w (recurring decision categories this company faces),
+stakeholders:3 of str<=3w (audiences the CEO communicates with, e.g. Board/Clinical staff/Payors),
+okr_examples:3 of str<=10w (concrete quarterly objectives for this industry),
 advisor:{name str (a real or fictional historical figure well-suited to this industry),persona<=12w,when_to_invoke<=12w,core_method<=24w}
 
 Output the minified JSON object only.`;
@@ -202,6 +219,7 @@ function coerce(data) {
     glossary: 6, departments: 5, roles: 4, bets: 4, risks: 3,
     kpis: 6, playbooks: 4, vendors: 4, decisions: 5, meetings: 4,
     inbox_rules: 5, intel_sections: 8,
+    decision_types: 3, stakeholders: 3, okr_examples: 3,
   };
   for (const [k, n] of Object.entries(need)) {
     if (!Array.isArray(out[k]) || out[k].length < n) {
@@ -310,6 +328,9 @@ function buildVault(d) {
     advTemplate: "_advisor_template",
     advRouter: "_advisor_router",
     advisor: safe(`Advisor - ${d.advisor.name}`),
+    profile: "Your Profile",
+    meetingReview: "_meeting-review-template",
+    goalAlign: "_goal-alignment-template",
     cap1: safe(`Capture - ${d.bets[0].name} follow-up`),
     cap2: safe(`Capture - ${d.kpis[0].name} signal`),
     raw1: safe(`Transcript - ${d.meetings[0].title}`),
@@ -460,6 +481,7 @@ Try: "Based on our decision log, why did we choose our lead vendor?" — the ans
 - Where we're headed → ${link(N.strategy)} and ${link(N.kpi)}
 - A real decision → ${link(N.declog)}
 - Build your own advisors → ${link(N.advTemplate)}
+- Self-coaching templates → ${link(N.meetingReview)}, ${link(N.goalAlign)}, and your ${link(N.profile)}
 `
   );
 
@@ -783,9 +805,9 @@ Read ${link(N.start)}, ${link(N.mission)}, ${link(N.memory)}, and ${link(N.struc
 Sit in on meetings (see ${link(N.meet(0))}) and read the latest ${link(N.declog)}.
 
 ## Day 8–14 — Ownership
-Pick up one ${link(N.role(0))}-style responsibility and run your first 1-on-1 with ${link(N.oneonone)}.
+Pick up one ${link(N.role(0))}-style responsibility and run your first 1-on-1 with ${link(N.oneonone)}. Fill in ${link(N.profile)} so the brain learns your voice.
 ` +
-      related([N.start, N.memory, N.structure, N.role(0), N.oneonone])
+      related([N.start, N.memory, N.structure, N.role(0), N.oneonone, N.profile])
   );
   put(
     "Wiki/30_People/1on1 Template.md",
@@ -879,13 +901,81 @@ Applied to ${link(N.dec(0))}: ${d.advisor.name} would ask whether the choice is 
 
 | Decision type | Advisor(s) | Why |
 |---|---|---|
-| Process, hiring, expansion pace | ${link(N.advisor)} | ${d.advisor.when_to_invoke} |
-| _(add your own)_ | _(name)_ | _(when to invoke)_ |
-| _(add your own)_ | _(name + name — a combination)_ | _(for decisions that need two lenses)_ |
+| ${d.decision_types[0]} | ${link(N.advisor)} | ${d.advisor.when_to_invoke} |
+| ${d.decision_types[1]} | _(run \`/build-advisor\`)_ | _(name the figure who'd advise this best)_ |
+| ${d.decision_types[2]} | _(run \`/build-advisor\` — try a combination)_ | _(for decisions that need two lenses)_ |
 
-Start from the schema in ${link(N.advTemplate)} and the worked example ${link(N.advisor)}. Route any logged choice in ${link(N.declog)} to the matching row.
+These three rows are the recurring decision types this company faces. Start from the schema in ${link(N.advTemplate)} and the worked example ${link(N.advisor)}; run \`/build-advisor\` to fill the empty rows. Route any logged choice in ${link(N.declog)} to the matching row.
 ` +
       related([N.advTemplate, N.advisor, N.declog])
+  );
+
+  // ---- self-coaching starter templates (blank — the visitor fills these in)
+  put(
+    "Wiki/30_People/Your Profile.md",
+    fm({ type: "person", status: "starter" }) +
+      `# Your Profile
+
+_Rename this note to your first name. This is how the brain — and your advisors — understand **you**: how you decide and how you communicate. Blank on purpose; fill it in._
+
+## Communication Style Profile
+_Capture how you actually sound to each audience. Paste two or three real sentences you would genuinely say to each — the AI learns your voice from real examples, not adjectives._
+
+### Voice for ${d.stakeholders[0]}
+_(empty — add 2–3 sentences in your real voice)_
+
+### Voice for ${d.stakeholders[1]}
+_(empty)_
+
+### Voice for ${d.stakeholders[2]}
+_(empty)_
+` +
+      related([N.onboarding, N.structure])
+  );
+  put(
+    "Wiki/50_Meetings/_meeting-review-template.md",
+    fm({ type: "template", status: "blank" }) +
+      `# Meeting Review — _(copy this per meeting)_
+
+_A self-coaching template. After a meeting, copy this note, rename it, and fill the four sections honestly — it's for you, not the record._
+
+## Decided
+_What was actually decided? List each decision and its single owner. Anything real becomes an entry in ${link(N.declog)}._
+
+## Punted
+_What did we defer or quietly avoid deciding? Name it plainly — punts hide in the gaps._
+
+## Behavioral flags for you
+_Where did you slip — scope creep, researching instead of deciding, conceding too early, dithering on a reversible call? See the guardrails in the root \`CLAUDE.md\`._
+
+## Comparison to prior similar meeting
+_How did this compare to the last meeting of this type? Better, worse, or the same trap again?_
+` +
+      related([N.declog, N.meet(0)])
+  );
+  put(
+    "Wiki/10_Strategy/_goal-alignment-template.md",
+    fm({ type: "template", status: "blank" }) +
+      `# Goal Alignment — _(run this every two weeks)_
+
+_A self-coaching template. Declare your goals, look at where your time actually went, score the gap, and adjust. Blank on purpose._
+
+## Q OKRs declared
+_Your objectives and key results this quarter. Replace these example prompts with your own:_
+- _${d.okr_examples[0]}_
+- _${d.okr_examples[1]}_
+- _${d.okr_examples[2]}_
+
+## Activity distribution last 14 days
+_Where did your hours actually go? Rough percentages by area — be honest, not aspirational._
+
+## Alignment scoring
+_For each OKR above, did your activity actually move it? Score 1–5 and note the gap._
+
+## Recommended adjustments
+_What will you stop, start, or shift over the next two weeks to close the gap?_
+` +
+      related([N.strategy, N.kpi])
   );
 
   // ---- Wiki/40_Decisions  (enhanced template)
@@ -1002,22 +1092,40 @@ Fed ${link(N.dec(decIdx))}. See the full ${link(N.declog)}.
   put(
     ".claude/commands/build-advisor.md",
     `---
-description: Discover the decision types in your vault and build custom AI advisors for them
+description: Live-discover your recurring decision types and draft a custom AI advisor for each
 allowed-tools: Read, Glob, Grep, Write
+model: claude-haiku-4-5-20251001
+effort: low
 ---
 
-# /build-advisor — advisor factory
+# /build-advisor — advisor factory (live discovery)
 
-You are an **advisor factory**. You don't impose a fixed panel of gurus; you help the user build advisors tuned to the decisions *they* actually face. Work interactively.
+Run this as a fast, scripted-feeling sequence — the whole loop should feel near-instant (well under 30 seconds after the visitor answers). You don't impose a fixed panel of gurus; you help the visitor build advisors tuned to the decisions *they* actually face. **Do not read any other files** — everything you need is in this command. Do the minimum: present, ask, write one file, print Done.
 
-## Steps
-1. **Scan** \`Raw/\` and \`Wiki/40_Decisions/\` to identify the 3–5 recurring *decision types* this company faces (e.g. pricing, hiring, vendor commitments, expansion). Summarise what you found.
-2. **Ask the user:** "For each of these decision types, which figure in history — real or fictional — would be the best advisor, and why?" Wait for their answer.
-3. For each named advisor, **draft a note** \`Wiki/30_People/Advisor - <name>.md\` following the schema in \`Wiki/30_People/_advisor_template.md\` (Name · When to invoke · Core methodology · Question framework · Output format · Anti-patterns · Worked example). Tie the worked example to a real entry in the Decision Log.
-4. **Ask the user to review and edit** each draft before finalising.
-5. **Optionally update** \`Wiki/30_People/_advisor_router.md\`, adding a row mapping each decision type to its advisor (or a *combination* of advisors for decisions that need two lenses).
+## Step 1 — Scan (print this line verbatim, then continue immediately)
+> Scanning Raw/ and Wiki/40_Decisions/ for recurring decision types...
 
-Keep advisors graph-visible as Wiki notes. If one becomes heavily used, suggest promoting it into a reusable Claude Code skill (\`.claude/skills/<name>/SKILL.md\`).
+The three recurring decision types below were identified when this brain was generated. Do not re-analyse — just present them.
+
+## Step 2 — Present the three decision types (print as a numbered list)
+1. ${d.decision_types[0]}
+2. ${d.decision_types[1]}
+3. ${d.decision_types[2]}
+
+## Step 3 — Ask, then STOP and wait
+Ask in one line:
+> "Who in history — real or fictional — would be the best advisor here? Name one (or one per type)."
+
+## Step 4 — Draft instantly (the critical path)
+For each advisor the visitor names, immediately **Write** \`Wiki/30_People/<advisor_slug>.md\` (slug = lowercase, hyphenated name) with these sections, filled from what you know about that figure — no file reads needed:
+\`# Advisor: <Name>\` · **When to invoke** (tie to the matching decision type above) · **Core methodology** (1 short paragraph) · **Question framework** (3–4 questions) · **Output format** (a few bullets) · **Anti-patterns** (when they're wrong) · **Worked example** (apply them to one decision from \`Wiki/40_Decisions/\`). Keep it tight. Naming only one advisor is fine.
+
+## Step 5 — Print Done (this is the finish line)
+Print exactly:
+> Done — drafted Wiki/30_People/<advisor_slug>.md. Try \`/advisor <name> <topic>\` to invoke.
+
+## Step 6 — Optional, only if asked
+Offer to add a row to ${link(N.advRouter)} mapping the decision type to the new advisor, and to promote a heavily-used advisor into a reusable skill (\`.claude/skills/<name>/SKILL.md\`). Don't block the finish line on this.
 `
   );
   put(
@@ -1033,9 +1141,9 @@ allowed-tools: Read, Glob, Grep
 Consult the advisor named **$1** on the topic: **$2**.
 
 ## Steps
-1. **Read** the advisor's note at \`Wiki/30_People/Advisor - $1.md\`. If it doesn't exist, list the advisors in \`Wiki/30_People/\` and ask the user to pick one (or to run \`/build-advisor\` to create it).
-2. **Ground** the analysis: read \`MEMORY.md\` for current state and skim \`Intelligence_snapshot.md\` and the relevant \`Wiki/40_Decisions/\` notes for context.
-3. **Run the advisor's own Question framework** from their note, then produce their analysis in their **Output format** — staying in character with their Core methodology, and honestly noting their Anti-patterns where relevant.
+1. **Find** the advisor's note in \`Wiki/30_People/\`. Try, in order: \`Advisor - $1.md\`, then \`$1.md\` (and a lowercase-hyphenated slug of $1), then glob \`Wiki/30_People/*$1*.md\`. If none exists, list the advisors in \`Wiki/30_People/\` and ask the visitor to pick one (or to run \`/build-advisor\` to create it).
+2. **Ground** the analysis: read \`MEMORY.md\` for current state and skim \`Intelligence_snapshot.md\` and the relevant \`Wiki/40_Decisions/\` notes.
+3. **Run the advisor's own Question framework** from their note, then produce their analysis in their **Output format** — in character with their Core methodology, and honestly noting their Anti-patterns where they apply.
 4. **Close** with a suggested \`Wiki/40_Decisions/\` entry (options, owner, reversal conditions, six-month review date) if a decision is warranted.
 `
   );
@@ -1105,8 +1213,6 @@ if (SKELETON) {
   console.log(`\n📁  Vault: ${outDir}`);
   console.log(`    ${stats.files} files · ${stats.sampleNotes} sample notes · ${stats.links} wikilinks · ${stats.hubs} hub notes (6+ links) · min links/note ${stats.minLinksInSample}`);
   if (zipPath) console.log(`📦  Zip:   ${zipPath}`);
-  console.log(`\n👉  Open in Obsidian:`);
-  console.log(`    open -a Obsidian "${outDir}"\n`);
 }
 
 console.log(
@@ -1117,3 +1223,20 @@ console.log(
       outDir, zipPath, ...stats,
     })
 );
+
+// ---- Trophy moment: the bloom. Launch Obsidian on the finished vault last.
+if (!SKELETON) {
+  console.log(`\n✅ Blueprint ready: ${outDir}/`);
+  if (!NO_OPEN) {
+    console.log(`   Opening in Obsidian (graph view) →`);
+    try {
+      await execFileP("open", ["-a", "Obsidian", outDir]);
+    } catch {
+      console.log(`   (Could not auto-open — run: open -a Obsidian "${outDir}")`);
+    }
+    console.log(
+      `   If Obsidian is already open with another vault: in Obsidian → vault switcher\n` +
+      `   (bottom-left) → Open another vault → Open folder as vault → select the path above.`
+    );
+  }
+}

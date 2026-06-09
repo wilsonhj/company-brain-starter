@@ -31,3 +31,4 @@ Try: "Based on our decision log, why did we choose our lead vendor?" — the ans
 - Where we're headed → [[Annual Strategy]] and [[KPI Dashboard]]
 - A real decision → [[Decision Log]]
 - Build your own advisors → [[_advisor_template]]
+- Self-coaching templates → [[_meeting-review-template]], [[_goal-alignment-template]], and your [[Your Profile]]

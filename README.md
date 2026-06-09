@@ -99,6 +99,17 @@ scripts/                       The generator that builds personalized vaults
 
 Every note links to at least two others; hub notes (Start Here, Annual Strategy, Decision Log, the memory files) link to six or more. That density is deliberate — it's what makes the graph view *bloom*, and what lets an AI hop from a question to the underlying evidence.
 
+### The self-coaching meta-templates
+
+Beyond the example notes, every brain ships a set of **blank templates** for working *on yourself*, not just the company. They come empty (you fill them in), but each is seeded with industry-specific prompts so you're never staring at a blank page:
+
+- **Meeting review** (`Wiki/50_Meetings/_meeting-review-template.md`) — after any meeting, capture what was *decided*, what got *punted*, the *behavioral flags* you noticed in yourself, and how it compared to the last meeting of its kind.
+- **Communication style profile** (`Wiki/30_People/Your Profile.md`) — record how you actually want to sound to each audience (board, team, customers…), so the AI can speak in your voice.
+- **Goal alignment** (`Wiki/10_Strategy/_goal-alignment-template.md`) — every two weeks, line up your declared OKRs against where your time actually went, score the gap, and adjust.
+- **Advisor factory** (`Wiki/30_People/_advisor_template.md` + `/build-advisor`) — build a bench of AI advisors tuned to the decisions you keep facing.
+
+Together these are the "depth surface area": the brain doesn't just remember the company, it helps you run yourself.
+
 ---
 
 ## The 30-day plan (no software project required)

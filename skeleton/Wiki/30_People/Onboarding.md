@@ -13,7 +13,7 @@ Read [[START_HERE]], [[Mission and Vision]], [[MEMORY]], and [[Company Structure
 Sit in on meetings (see [[Meeting - Quarterly Strategy Offsite]]) and read the latest [[Decision Log]].
 
 ## Day 8–14 — Ownership
-Pick up one [[Role - Founder CEO]]-style responsibility and run your first 1-on-1 with [[1on1 Template]].
+Pick up one [[Role - Founder CEO]]-style responsibility and run your first 1-on-1 with [[1on1 Template]]. Fill in [[Your Profile]] so the brain learns your voice.
 
 ## Related
 - [[START_HERE]]
@@ -21,3 +21,4 @@ Pick up one [[Role - Founder CEO]]-style responsibility and run your first 1-on-
 - [[Company Structure]]
 - [[Role - Founder CEO]]
 - [[1on1 Template]]
+- [[Your Profile]]
