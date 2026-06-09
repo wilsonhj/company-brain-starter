@@ -1,0 +1,13 @@
+# Generated personalized blueprints live OUTSIDE the repo (~/Showcase/blueprints)
+# but ignore these just in case anyone generates locally:
+/out/
+*.zip
+
+# OS / editor cruft
+.DS_Store
+.obsidian/workspace*
+Thumbs.db
+node_modules/
+
+# Local Claude Code settings (machine-specific)
+.claude/settings.local.json
