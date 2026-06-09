@@ -12,44 +12,92 @@ In most companies under a few hundred people, the most valuable knowledge lives 
 
 A **company brain** fixes this by giving every consequential thing — your mission, your bets, your decisions, how each job is done — a single, durable home. The twist that makes it modern: it's written so an **AI agent can read it too**. Point a tool like [Claude Code](https://claude.com/claude-code) at the folder and your company can suddenly *answer questions about itself*, with citations to the exact note.
 
+This starter is built on four ideas worth understanding. None of them require any software project to adopt.
+
 ---
 
-## The key idea: a layered `CLAUDE.md`
+## Idea 1 — Knowledge flows in one direction
 
-This is the part worth slowing down for.
+Most knowledge bases rot because everything is dumped in one pile and nobody trusts any of it. This brain has a **pipeline**, and only the end of the pipeline is treated as truth:
 
-A `CLAUDE.md` file is a short, plain-English instruction sheet that an AI agent reads **automatically** before it does anything in that folder. This repo puts one in **every** folder — and that layering is the whole trick:
+> **Inbox → Raw → Wiki → outputs**
+
+- **`Inbox/`** — everything enters here first: a thought, a forwarded email, a meeting you just left. You capture; you don't organize. Capturing beats filing.
+- **`Raw/`** — if something has lasting value, its *original source* (a meeting transcript, a contract, a clipping) is filed here and **never edited**. This is your evidence.
+- **`Wiki/`** — the distilled, human-readable truth. You and the AI turn Raw material into Wiki notes **through conversation**, not by pasting. This is where people read.
+- **`outputs/`** — when you ask the brain a question, the answer lands here. It's disposable — regenerate it any time.
+
+Because the flow is explicit, everyone (and every AI agent) knows where to look: the Wiki is authoritative, Raw is the receipts, the Inbox is the to-do, and outputs are throwaway. That single rule is what keeps the brain trustworthy as it grows.
+
+Inside `Wiki/`, notes are organized by topic — company, strategy, operations, people, decisions, meetings — so the truth is easy to navigate.
+
+---
+
+## Idea 2 — The layered `CLAUDE.md` (the part worth slowing down for)
+
+A `CLAUDE.md` file is a short, plain-English instruction sheet that an AI agent reads **automatically** before it does anything in that folder. This starter puts one in **every** folder — and that layering is the whole trick:
 
 | Folder | What its `CLAUDE.md` tells the AI |
 |---|---|
-| **root** | The company's mission, and how to behave across the whole vault. |
-| `40_Decisions/` | *"Every decision must record the options considered, a single owner, and what would make us reverse it. Never edit a past decision — supersede it."* |
-| `50_Meetings/` | *"One note per meeting. Capture decisions and owners, not a transcript. File any decision into the decision log and link it both ways."* |
-| `90_Inbox/` | *"Anything unsorted lands here first. Here are the triage rules for sorting it."* |
+| **root** | The company's mission, how knowledge flows, and how to behave everywhere. |
+| `Inbox/` | *"Everything enters here. Keep lasting sources in Raw, distil meaning into the Wiki, never let it go stale."* |
+| `Wiki/40_Decisions/` | *"Every decision must record its options, owner, date, reversal conditions, linked sources, and a six-month review date. Never edit a past decision — supersede it."* |
+| `Wiki/50_Meetings/` | *"One note per meeting. Capture decisions and owners, not a transcript. Cite the source transcript in Raw."* |
 
-Because the guidance lives **next to the content**, the AI inherits your company's operating rules wherever it works — the same way a good new hire would pick up "how we do things here" by sitting in the right room. You're not writing one giant prompt; you're layering small, local rules. That is what turns a folder of notes into a brain.
+Because the guidance lives **next to the content**, the AI inherits your company's operating rules wherever it works — the same way a good new hire picks up "how we do things here" by sitting in the right room. You're not writing one giant prompt; you're layering small, local rules. That is what turns a folder of notes into a brain.
+
+The root `CLAUDE.md` also carries **behavioral guardrails** — a short list of patterns the AI is told to watch for and push back on (scope creep, researching instead of deciding, giving away too much in a negotiation, dithering over a decision that's easily reversible). A brain with opinions is more useful than a brain that only answers.
+
+---
+
+## Idea 3 — Three layers of memory
+
+"What's in a `CLAUDE.md`, and why does it matter?" The honest answer is that one file can't do everything, so this starter splits memory into **three files at the root**, each with one job:
+
+1. **`CLAUDE.md` — the rules.** How the AI should behave. Slow-changing.
+2. **`MEMORY.md` — today's state.** A one-page snapshot an agent reads *first*: this quarter's focus, what's urgent, who's on what, the latest decisions. You update it weekly.
+3. **`Intelligence_snapshot.md` — the deep picture.** The authoritative, full-panorama view of the whole business. Slow-changing, comprehensive, the thing an agent reads to understand context in depth.
+
+Rules vs. live state vs. deep reference. Keeping them separate is what lets the AI answer both *"what should I be working on right now?"* and *"how does this company actually make money?"* without confusing the two.
+
+---
+
+## Idea 4 — We don't give you advisors. We give you a way to build *your* advisors.
+
+Generic AI assistants ship a fixed cast of famous names. That's a parlor trick. The real value is an AI advisor tuned to the decisions **you** actually face — so this starter ships an **advisor factory** instead of a fixed list.
+
+- **`Wiki/30_People/_advisor_template.md`** — the schema for any advisor: when to invoke them, how they think, the exact questions they ask, how they format their answer, and — crucially — when their view is *wrong*.
+- **`/build-advisor`** — a command that reads your decision log and Raw material, works out the kinds of decisions you keep making, asks you which historical figure would best advise each one, and drafts an advisor for each, following the schema.
+- **`/advisor <name> <topic>`** — consults one of your advisors on a live question, in their voice and method, and proposes a decision-log entry.
+
+Each generated brain comes with **one worked-example advisor, chosen to fit your industry**, so you can see the pattern immediately — then replace it with your own. (Open the starter and you'll find a generic operator; a generated healthcare brain might pick a public-health pioneer, a private-equity brain a famous dealmaker.)
+
+This is the differentiated idea: *a way to build your own bench*, not a borrowed one.
 
 ---
 
 ## What's in here
 
 ```
-skeleton/            A complete generic company brain you can copy and start using today
-  CLAUDE.md          Root: company context + how agents should use the vault
-  START_HERE.md      Your 30-day adoption plan (read this first)
-  00_Company/        Mission, structure, glossary            + CLAUDE.md
-  10_Strategy/       Annual strategy, bets, risks, KPIs       + CLAUDE.md
-  20_Operations/     Playbooks, SOPs, vendor notes            + CLAUDE.md
-  30_People/         Roles, onboarding, 1-on-1 template       + CLAUDE.md
-  40_Decisions/      Decision log, one note per decision      + CLAUDE.md
-  50_Meetings/       Meeting summaries, auto-filed            + CLAUDE.md
-  90_Inbox/          Capture zone + agent triage rules        + CLAUDE.md
+skeleton/                      A complete generic company brain — copy it and start today
+  CLAUDE.md                    Root: mission, data flow, behavioral guardrails
+  MEMORY.md                    Layer 2: this-quarter state snapshot (fill in the blanks)
+  Intelligence_snapshot.md     Layer 3: deep-picture starter (~section prompts to expand)
+  START_HERE.md                Your 30-day adoption plan (read this first)
+  Inbox/                       Capture zone + sample captures        + CLAUDE.md
+  Raw/                         Immutable source transcripts          + CLAUDE.md
+  Wiki/                        The distilled truth (read here)
+    00_Company/  10_Strategy/  20_Operations/                        each + CLAUDE.md
+    30_People/   40_Decisions/ 50_Meetings/                          each + CLAUDE.md
+    30_People/_advisor_template.md, _advisor_router.md, Advisor - …  the advisor factory
+  outputs/                     Generated answers land here (starts empty) + CLAUDE.md
+  .claude/commands/            /build-advisor and /advisor for your own agent
 
-scripts/             The generator that builds personalized vaults
-.claude/commands/    The /brain-blueprint slash command for Claude Code
+scripts/                       The generator that builds personalized vaults
+.claude/commands/              The /brain-blueprint command (for whoever runs the showcase)
 ```
 
-Every note in the skeleton links to at least two others; the hub notes (Start Here, Annual Strategy, Decision Log) link to six or more. That density is deliberate — it's what makes the graph view *bloom* and what lets an AI hop from a question to the underlying evidence.
+Every note links to at least two others; hub notes (Start Here, Annual Strategy, Decision Log, the memory files) link to six or more. That density is deliberate — it's what makes the graph view *bloom*, and what lets an AI hop from a question to the underlying evidence.
 
 ---
 
@@ -57,20 +105,20 @@ Every note in the skeleton links to at least two others; the hub notes (Start He
 
 You don't roll this out. You build one small habit per week. The full version lives in [`skeleton/START_HERE.md`](skeleton/START_HERE.md):
 
-- **Week 1 — Capture meetings only.** After each meeting, drop a few bullets into `50_Meetings/`. Don't organize. Just build the habit of writing it down.
-- **Week 2 — Add the decision log.** Each real choice gets a note: the options, what you picked, who owns it, what would reverse it. Five minutes each.
-- **Week 3 — Wire up Claude Code.** Point it at the folder. It reads every `CLAUDE.md` automatically, so it already knows how your company works.
-- **Week 4 — Ask your company a question.** *"Why did we choose our main vendor?"* The answer comes back with links to the exact notes. That's the payoff.
+- **Week 1 — Capture meetings only.** After each meeting, drop the notes into `Inbox/`. Don't organize. Just build the habit of writing it down.
+- **Week 2 — Add the decision log.** Each real choice gets a note: options, what you picked, who owns it, what would reverse it, when to review it. Five minutes each.
+- **Week 3 — Wire up Claude Code.** Point it at the folder. It reads every `CLAUDE.md` automatically, so it already knows how your company works. Ask it to process your week's Inbox into the Wiki.
+- **Week 4 — Ask your company a question, and build an advisor.** *"Why did we choose our lead vendor?"* comes back with links to the exact notes. Then run `/build-advisor` to create an advisor tuned to your decisions.
 
 ---
 
 ## Two ways to use this repo
 
 **1. Start from the generic skeleton (free, now).**
-Download or clone this repo, open [`skeleton/`](skeleton/) in Obsidian as a vault, and start replacing the example notes with your own. Everything — the structure, the layered `CLAUDE.md` files, the 30-day plan — is yours to keep.
+Clone this repo, open [`skeleton/`](skeleton/) in Obsidian as a vault, and start replacing the example notes with your own. Everything — the data-flow structure, the layered `CLAUDE.md` files, the memory triad, the advisor factory, the 30-day plan — is yours to keep.
 
 **2. Generate a personalized starter.**
-If you have [Claude Code](https://claude.com/claude-code), this repo ships a slash command that builds a starter vault tailored to *your* industry in under a minute:
+If you have [Claude Code](https://claude.com/claude-code), this repo ships a command that builds a starter vault tailored to *your* industry in under a minute:
 
 ```
 /brain-blueprint "consumer goods" 200
@@ -78,7 +126,7 @@ If you have [Claude Code](https://claude.com/claude-code), this repo ships a sla
 /brain-blueprint "financial services" 30 "PE fund"
 ```
 
-It writes a fresh, industry-flavored vault (35 interlinked notes, every folder's `CLAUDE.md` written for your context) to `~/Showcase/blueprints/` and zips it up to hand over. Open it in Obsidian and watch the graph fill in from nothing.
+It writes a fresh, industry-flavored vault (40+ interlinked notes, every folder's `CLAUDE.md` written for your context, a memory triad seeded with plausible state, and an industry-fit advisor) to `~/Showcase/blueprints/` and zips it up to hand over. Open it in Obsidian and watch the graph fill in from nothing.
 
 ---
 
@@ -86,13 +134,14 @@ It writes a fresh, industry-flavored vault (35 interlinked notes, every folder's
 
 The generator is intentionally **template-first and LLM-light**, because speed matters — a personalized vault must appear in under a minute.
 
-- **One AI call, not thirty.** A single [Claude Haiku](https://claude.com/claude-code) call returns *only* the industry-specific substitutions (company name, role titles, decision topics, KPI names, glossary terms) as compact JSON. No per-note AI calls. We disable extended thinking for this extraction (`MAX_THINKING_TOKENS=0`) — it isn't needed for structured substitution and cutting it takes the call from ~45s to ~20s.
-- **The templates do the writing.** A Node script weaves those substitutions into 35 notes and cross-links them deterministically, so link density and structure are guaranteed regardless of what the model returns.
-- **It never hard-fails.** If the AI call times out or returns malformed JSON, a built-in generic dataset takes over — important when you're generating live in front of someone on a phone hotspot.
-- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~40 files + one API call + zip." Node has a fast cold start, ships with macOS-friendly tooling, is native to the Claude Code ecosystem, and plain `.mjs` needs **no build step** — so there's nothing between "run" and "done." The AI call dominates wall time anyway; the file work is instant.
-- **Why Claude (not another provider)?** This is a Claude Code command, so it uses your existing Claude authentication — no extra API key to manage — and Haiku is the right latency/quality trade for short structured extraction.
+- **One AI call, not forty.** A single [Claude Opus 4.8](https://claude.com/claude-code) call returns *only* the industry-specific substitutions (company name, role titles, decision topics, KPI names, glossary terms, a state snapshot, the panorama's section headers, and one industry-fit advisor) as compact JSON. No per-note AI calls.
+- **The templates do the writing.** A Node script weaves those substitutions into 40+ notes and cross-links them deterministically, so link density and structure are guaranteed regardless of what the model returns.
+- **It never hard-fails.** If the AI call is slow or returns malformed JSON, a built-in generic dataset takes over and the vault still generates instantly — important when you're generating live in front of someone on a phone hotspot. The call's timeout sits *below* the 60-second budget, so even a worst-case slow response falls back rather than blowing the deadline.
+- **A speed detail that matters.** The single extraction call runs with extended thinking disabled (`MAX_THINKING_TOKENS=0`). For structured substitution the model doesn't need to "think out loud," and turning it off roughly halves the wall-clock time — the difference between comfortably under a minute and not.
+- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~55 files + one API call + zip." Node has a fast cold start, is native to the Claude Code ecosystem, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
+- **Why Claude (not another provider)?** This is a Claude Code command, so it uses your existing Claude authentication — no extra API key to manage — and Opus 4.8 gives the strongest industry-specific substitutions.
 
-Typical generation: **20–30 seconds**, 43 files, ~270 wikilinks, zero unresolved links, zero placeholder text.
+Typical generation: **40–45 seconds**, 55 files, ~300 wikilinks, zero unresolved links, zero placeholder text.
 
 ---
 

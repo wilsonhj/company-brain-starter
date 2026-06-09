@@ -7,9 +7,11 @@ allowed-tools: Bash(node:*), Bash(open:*)
 # /brain-blueprint
 
 Generate a personalized Obsidian "company brain" starter vault for a visitor's
-industry. Template-first and LLM-light: one fast Claude (Haiku) call fills in
-industry-specific substitutions, then the script weaves 35 densely-interlinked
-notes with a layered `CLAUDE.md` in every folder. Target: under 60 seconds.
+industry. Template-first and LLM-light: one Claude (Opus 4.8) call fills in
+industry-specific substitutions, then the script weaves 40+ densely-interlinked
+notes — a data-flow vault (Inbox → Raw → Wiki → outputs), a three-layer memory
+triad (CLAUDE.md / MEMORY.md / Intelligence_snapshot.md), a layered `CLAUDE.md`
+in every folder, and an industry-tailored advisor. Target: under 60 seconds.
 
 Running the generator now:
 
@@ -26,6 +28,9 @@ After it runs, tell the visitor:
    lives in the public `company-brain-starter` repo. Offer to **AirDrop** the
    personalized `.zip` (path printed above) or **email** it after.
 4. The takeaway line: *"Every folder has its own `CLAUDE.md` telling the AI how to
-   behave there — that layering is what turns a folder of notes into a company brain."*
+   behave there, knowledge flows Inbox → Raw → Wiki → outputs, and three files hold
+   the memory — rules, today's state, and the deep picture. That structure is what
+   turns a folder of notes into a company brain."* Point out the industry-tailored
+   advisor and `/build-advisor` as the "build YOUR advisors" hook.
 
 Do **not** attempt live personalized URLs on venue wifi — AirDrop or email only.

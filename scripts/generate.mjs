@@ -1,15 +1,20 @@
 #!/usr/bin/env node
-// brain-blueprint generator
-// Template-first, LLM-light: copies a skeleton instantly, makes ONE Claude call
-// for industry-specific substitutions, then weaves 30+ densely-interlinked notes.
+// brain-blueprint generator (architecture v2)
+// Template-first, LLM-light. Copies a skeleton instantly, makes ONE Claude
+// (Opus 4.8) call for industry-specific substitutions, then weaves a densely
+// interlinked "company brain" vault.
+//
+// Structure follows Karpathy's data-flow LLM-Wiki pattern (Inbox -> Raw -> Wiki
+// -> outputs) with domain subfolders inside Wiki/, a three-layer memory triad
+// at the root (CLAUDE.md / MEMORY.md / Intelligence_snapshot.md), and an
+// "advisor factory" meta-pattern instead of a fixed advisor list.
 //
 // Usage:
 //   node scripts/generate.mjs "<industry>" <team_size> ["one-line focus"]
 //   node scripts/generate.mjs --skeleton            # build the generic repo skeleton
 //
 // Requires: the `claude` CLI on PATH (uses the user's existing auth) and `zip`.
-// If the LLM call fails for any reason, a deterministic fallback dataset is used
-// so a live demo can never hard-fail.
+// A deterministic fallback dataset means the call can NEVER hard-fail a demo.
 
 import { execFile } from "node:child_process";
 import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
@@ -19,6 +24,8 @@ import { promisify } from "node:util";
 
 const execFileP = promisify(execFile);
 const t0 = Date.now();
+
+const MODEL = "claude-opus-4-8";
 
 // ----------------------------------------------------------------------------
 // args
@@ -71,12 +78,9 @@ const zipDir = join(SHOWCASE, "out");
 // ----------------------------------------------------------------------------
 function fallbackData() {
   const ind = String(industry).replace(/\b\w/g, (c) => c.toUpperCase());
-  const cap = (s) => s.replace(/\b\w/g, (c) => c.toUpperCase());
   return {
     company_name: SKELETON ? "Your Company" : `${ind} Holdings`,
-    tagline: SKELETON
-      ? "A starter company brain"
-      : `Operating company in ${industry}`,
+    tagline: SKELETON ? "A starter company brain" : `Operating company in ${industry}`,
     mission: `We build a durable ${industry} business by compounding good decisions, documenting how we operate, and giving every teammate (and every AI agent) the same context the founders have.`,
     glossary: [
       { term: "Company Brain", def: "The single source of truth for how we think, decide, and operate." },
@@ -96,13 +100,13 @@ function fallbackData() {
       { title: "Finance Lead", mandate: "Owns the model, cash runway, and the numbers behind every bet." },
     ],
     bets: [
-      { name: "Operational Leverage", thesis: "Document every process so the team can double output without doubling headcount." },
+      { name: "Operational Leverage", thesis: "Document every process so the team doubles output without doubling headcount." },
       { name: "Premium Positioning", thesis: "Win on quality and trust rather than competing on price." },
       { name: "AI-Native Operations", thesis: "Give agents the same context as staff so routine work runs itself." },
       { name: "Disciplined Expansion", thesis: "Enter one new market at a time, only after the core is profitable." },
     ],
     risks: [
-      { name: "Key-Person Dependency", exposure: "Too much context lives only in the founders' heads.", mitigation: "Write it down weekly; the brain is the backup." },
+      { name: "Key-Person Dependency", exposure: "Too much context lives only in founders' heads.", mitigation: "Write it down weekly; the brain is the backup." },
       { name: "Margin Compression", exposure: "Input costs rise faster than we can reprice.", mitigation: "Track unit economics monthly; reprice on a schedule." },
       { name: "Overextension", exposure: "Growing in too many directions at once.", mitigation: "One bet at a time, with explicit reversal conditions." },
     ],
@@ -127,11 +131,11 @@ function fallbackData() {
       { name: "Analytics Stack", category: "Data", use: "Single dashboard feeding the KPI review." },
     ],
     decisions: [
-      { title: "Adopt a Written Decision Log", context: "Decisions were made in chat and forgotten.", options: ["Keep deciding ad hoc", "Use a spreadsheet", "Use one note per decision in the brain"], choice: "One note per decision in the brain", rationale: "Searchable, linkable, and readable by AI agents.", reversal: "Revisit if the team finds logging slows them down for two sprints." },
+      { title: "Adopt a Written Decision Log", context: "Decisions were made in chat and forgotten.", options: ["Keep deciding ad hoc", "Use a spreadsheet", "One note per decision in the brain"], choice: "One note per decision in the brain", rationale: "Searchable, linkable, and readable by AI agents.", reversal: "Revisit if logging slows the team for two sprints." },
       { title: "Standardise on a Single Operating Platform", context: "Three tools held overlapping data.", options: ["Keep all three", "Build in-house", "Consolidate onto one platform"], choice: "Consolidate onto one platform", rationale: "Lower cost and one source of truth.", reversal: "Reverse if the platform raises prices above budget." },
-      { title: "Hold Cash Runway Above Nine Months", context: "Growth spending was outpacing revenue.", options: ["Spend to grow faster", "Hold 6 months", "Hold 9 months minimum"], choice: "Hold 9 months minimum", rationale: "Buys time to recover from one bad quarter.", reversal: "Loosen only after two profitable quarters." },
-      { title: "Enter One New Market First", context: "Two expansion options on the table.", options: ["Both at once", "Neither yet", "The adjacent market first"], choice: "The adjacent market first", rationale: "Reuses existing playbooks; lower risk.", reversal: "Pause if the core market growth dips below target." },
-      { title: "Wire Up an AI Company Brain", context: "Context lived in people's heads.", options: ["Hire more coordinators", "Buy a wiki", "Build an AI-readable brain with layered CLAUDE.md"], choice: "Build an AI-readable brain with layered CLAUDE.md", rationale: "Agents and humans share one context.", reversal: "Reassess if maintenance exceeds the time it saves." },
+      { title: "Hold Cash Runway Above Nine Months", context: "Growth spending outpaced revenue.", options: ["Spend to grow faster", "Hold 6 months", "Hold 9 months minimum"], choice: "Hold 9 months minimum", rationale: "Buys time to recover from one bad quarter.", reversal: "Loosen only after two profitable quarters." },
+      { title: "Enter One New Market First", context: "Two expansion options on the table.", options: ["Both at once", "Neither yet", "The adjacent market first"], choice: "The adjacent market first", rationale: "Reuses existing playbooks; lower risk.", reversal: "Pause if core-market growth dips below target." },
+      { title: "Wire Up an AI Company Brain", context: "Context lived in people's heads.", options: ["Hire more coordinators", "Buy a wiki", "Build an AI-readable brain"], choice: "Build an AI-readable brain", rationale: "Agents and humans share one context.", reversal: "Reassess if maintenance exceeds the time it saves." },
     ],
     meetings: [
       { title: "Quarterly Strategy Offsite", type: "Strategy", attendees: ["Founder / CEO", "Head of Operations", "Finance Lead"], notes: "Reviewed the annual bets and reset KPI targets for the quarter." },
@@ -141,42 +145,63 @@ function fallbackData() {
     ],
     inbox_rules: [
       "Anything unfiled lands here first — capture beats organising.",
-      "If it is a decision, an agent moves it to 40_Decisions and links the bet it serves.",
-      "If it is a meeting, file under 50_Meetings and link any decisions made.",
-      "If it names a metric, link it to the KPI Dashboard.",
+      "If it has lasting value as a source, move the raw artifact to Raw/.",
+      "If it is a decision, distil it into Wiki/40_Decisions and link the bet it serves.",
+      "If it names a metric, link it to the KPI Dashboard in Wiki/10_Strategy.",
       "Review and empty the Inbox every Friday.",
     ],
+    memory: {
+      quarter_focus: "Stabilise core operations and prove unit economics before any expansion.",
+      urgent: ["Close the quarterly hiring plan", "Finalise the lead vendor contract", "Refresh the financial model"],
+      team_deployment: ["Operations on the platform migration", "Commercial on the top ten accounts", "Finance on the runway review"],
+      recent_decisions: ["Adopted a written decision log", "Consolidated onto one operating platform", "Held runway above nine months"],
+    },
+    intel_sections: [
+      "Company snapshot", "Market and competitors", "Customers and segments",
+      "Products and operations", "Financial position", "Team and org design",
+      "Active strategic bets", "Open risks", "Key relationships and vendors",
+      "Open questions and unknowns",
+    ],
+    advisor: {
+      name: "The Operator",
+      persona: "A pragmatic scale-up COO who has run lean teams through fast growth.",
+      when_to_invoke: "Decisions about process, hiring, vendor commitments, or expansion pace.",
+      core_method: "Asks what breaks first at double the current volume, insists on a single owner and a single metric per initiative, and always prefers a small reversible step over a large irreversible bet.",
+    },
   };
 }
 
 function buildPrompt() {
   const focusLine = focus ? ` Focus: ${focus}.` : "";
-  // LLM-light: ask ONLY for short industry-specific substitutions (names, titles,
-  // terse phrases). The templates write the prose. Minified output keeps it fast.
+  // LLM-light: ONLY short industry-specific substitutions. Templates write prose.
+  // Minified output + capped strings keep this fast even on Opus.
   return `Generate industry-specific substitutions for a fictional but realistic company.
 Industry: ${industry}. Team size: ${teamSize}.${focusLine}
 
-Reply with MINIFIED JSON ON ONE LINE (no newlines, no markdown fence, no commentary). Every value concrete and specific to this industry — NEVER "lorem", "TODO", or placeholders. Respect the word caps to stay terse.
+Reply with MINIFIED JSON ON ONE LINE (no newlines, no markdown fence, no commentary). Every value concrete and specific to this industry — NEVER "lorem", "TODO", or placeholders. Respect the word caps to stay terse and fast.
 
 Keys and exact array lengths:
-company_name(str), tagline(str,<=8 words),
-glossary:8 of {term,def<=10w}, departments:5 of str,
-roles:4 of {title,mandate<=10w}, bets:4 of {name,thesis<=12w},
-risks:3 of {name,exposure<=9w,mitigation<=9w}, kpis:6 of {name,target<=6w},
-playbooks:4 of {title,steps:3 of str<=8w}, vendors:4 of {name,category,use<=8w},
-decisions:5 of {title,context<=12w,options:3 of str<=6w,choice<=8w,rationale<=12w,reversal<=12w},
-meetings:4 of {title,type,attendees:2-3 of str,notes<=15w}, inbox_rules:5 of str<=12w
+company_name(str), tagline(str,<=8w),
+glossary:6 of {term,def<=8w}, departments:5 of str,
+roles:4 of {title,mandate<=8w}, bets:4 of {name,thesis<=10w},
+risks:3 of {name,exposure<=8w,mitigation<=8w}, kpis:6 of {name,target<=6w},
+playbooks:4 of {title,steps:3 of str<=6w}, vendors:4 of {name,category,use<=7w},
+decisions:5 of {title,context<=10w,options:3 of str<=5w,choice<=7w,rationale<=10w,reversal<=10w},
+meetings:4 of {title,type,attendees:2-3 of str,notes<=12w}, inbox_rules:5 of str<=10w,
+memory:{quarter_focus<=16w,urgent:3 of str<=10w,team_deployment:3 of str<=10w,recent_decisions:3 of str<=10w},
+intel_sections:8 of str<=6w,
+advisor:{name str (a real or fictional historical figure well-suited to this industry),persona<=12w,when_to_invoke<=12w,core_method<=24w}
 
 Output the minified JSON object only.`;
 }
 
 function coerce(data) {
-  // Ensure shape; backfill from fallback if the model under-delivers.
   const fb = fallbackData();
   const out = { ...fb, ...data };
   const need = {
-    glossary: 8, departments: 5, roles: 4, bets: 4, risks: 3,
-    kpis: 6, playbooks: 4, vendors: 4, decisions: 5, meetings: 4, inbox_rules: 5,
+    glossary: 6, departments: 5, roles: 4, bets: 4, risks: 3,
+    kpis: 6, playbooks: 4, vendors: 4, decisions: 5, meetings: 4,
+    inbox_rules: 5, intel_sections: 8,
   };
   for (const [k, n] of Object.entries(need)) {
     if (!Array.isArray(out[k]) || out[k].length < n) {
@@ -188,6 +213,17 @@ function coerce(data) {
   for (const s of ["company_name", "tagline", "mission"]) {
     if (typeof out[s] !== "string" || !out[s].trim()) out[s] = fb[s];
   }
+  // nested objects
+  out.memory = { ...fb.memory, ...(data && data.memory) };
+  for (const k of ["urgent", "team_deployment", "recent_decisions"]) {
+    if (!Array.isArray(out.memory[k]) || out.memory[k].length < 3)
+      out.memory[k] = (out.memory[k] || []).concat(fb.memory[k]).slice(0, 3);
+  }
+  out.advisor = { ...fb.advisor, ...(data && data.advisor) };
+  for (const s of ["name", "persona", "when_to_invoke", "core_method"]) {
+    if (typeof out.advisor[s] !== "string" || !out.advisor[s].trim())
+      out.advisor[s] = fb.advisor[s];
+  }
   return out;
 }
 
@@ -196,29 +232,26 @@ async function getData() {
   try {
     const { stdout } = await execFileP(
       "claude",
-      [
-        "-p", buildPrompt(),
-        "--model", "claude-haiku-4-5-20251001",
-        "--output-format", "json",
-      ],
+      ["-p", buildPrompt(), "--model", MODEL, "--output-format", "json"],
       {
         maxBuffer: 1024 * 1024 * 16,
-        timeout: 80000,
-        // Haiku otherwise burns ~5k extended-thinking tokens on this simple
-        // extraction (~45s). Disabling it cuts wall time to ~20s with identical
-        // output. This single flag is what keeps generation under the 60s SLA.
+        // Timeout sits BELOW the 60s SLA: if the model is slow, we abandon it
+        // and fall back to the instant generic dataset, so the whole run still
+        // finishes under 60s rather than hanging in front of a visitor.
+        timeout: 56000,
+        // Opus otherwise burns thousands of extended-thinking tokens on this
+        // simple extraction. Disabling it is what keeps the call ~40s, not ~90s.
         env: { ...process.env, MAX_THINKING_TOKENS: "0" },
       }
     );
     const outer = JSON.parse(stdout);
     let txt = String(outer.result || "").trim();
-    // strip a ```json ... ``` fence if present, then take the first {...} block
     txt = txt.replace(/^```[a-z]*\s*/i, "").replace(/```\s*$/i, "").trim();
     const a = txt.indexOf("{");
     const b = txt.lastIndexOf("}");
     if (a >= 0 && b > a) txt = txt.slice(a, b + 1);
     const data = JSON.parse(txt);
-    return { data: coerce(data), source: "claude-haiku" };
+    return { data: coerce(data), source: MODEL };
   } catch (e) {
     console.error(`[warn] LLM call failed (${e.message}); using fallback dataset.`);
     return { data: coerce(fallbackData()), source: "fallback" };
@@ -238,20 +271,11 @@ const related = (names) =>
 const fm = (o) =>
   "---\n" +
   Object.entries(o)
-    .map(([k, v]) =>
-      Array.isArray(v) ? `${k}: [${v.join(", ")}]` : `${k}: ${v}`
-    )
+    .map(([k, v]) => (Array.isArray(v) ? `${k}: [${v.join(", ")}]` : `${k}: ${v}`))
     .join("\n") +
   "\n---\n";
 
-function todayMinus(days) {
-  const d = new Date(Date.now() - days * 86400000);
-  const p = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
-}
-
-// Obsidian/filesystem-safe note basename. Applied to BOTH the filename and the
-// wikilink so the two always match. Strips path separators and reserved chars.
+// Obsidian/filesystem-safe note basename. Applied to BOTH filename and wikilink.
 function safe(s) {
   return String(s)
     .replace(/[\/\\:#^\[\]|]+/g, " ")
@@ -259,10 +283,20 @@ function safe(s) {
     .trim();
 }
 
+function todayMinus(days) {
+  const d = new Date(Date.now() - days * 86400000);
+  const p = (n) => String(n).padStart(2, "0");
+  return `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}`;
+}
+function todayPlus(days) {
+  return todayMinus(-days);
+}
+
 function buildVault(d) {
   const C = d.company_name;
-  // canonical basenames (reused for both filenames and wikilinks)
   const N = {
+    memory: "MEMORY",
+    intel: "Intelligence_snapshot",
     start: "START_HERE",
     mission: "Mission and Vision",
     structure: "Company Structure",
@@ -273,7 +307,13 @@ function buildVault(d) {
     onboarding: "Onboarding",
     oneonone: "1on1 Template",
     declog: "Decision Log",
-    inbox: "Inbox",
+    advTemplate: "_advisor_template",
+    advRouter: "_advisor_router",
+    advisor: safe(`Advisor - ${d.advisor.name}`),
+    cap1: safe(`Capture - ${d.bets[0].name} follow-up`),
+    cap2: safe(`Capture - ${d.kpis[0].name} signal`),
+    raw1: safe(`Transcript - ${d.meetings[0].title}`),
+    raw2: safe(`Transcript - ${d.meetings[1].title}`),
     bet: (i) => safe(`Bet - ${d.bets[i].name}`),
     risk: (i) => safe(`Risk - ${d.risks[i].name}`),
     role: (i) => safe(`Role - ${d.roles[i].title}`),
@@ -282,38 +322,109 @@ function buildVault(d) {
     meet: (i) => safe(`Meeting - ${d.meetings[i].title}`),
   };
 
-  // ---- root CLAUDE.md
+  // ======================================================================
+  // ROOT — the three-layer memory triad lives here
+  // ======================================================================
+
+  // ---- root CLAUDE.md (agent instructions: data flow + guardrails)
   put(
     "CLAUDE.md",
-    `# ${C} — Company Brain
+    `# ${C} — Company Brain (root agent guide)
 
 ${d.mission}
 
 **Tagline:** ${d.tagline}
 **Industry:** ${industry}  ·  **Team size:** ${teamSize}${focus ? `  ·  **Focus:** ${focus}` : ""}
 
-## What this vault is
-This is the company's shared memory: how we think, decide, and operate. It is written to be read by **people and by AI agents** (Claude Code). Every folder has its own \`CLAUDE.md\` that tells an agent how to behave there — read it before acting in that folder.
+## The three-layer memory (read these in order)
+1. **This file (\`CLAUDE.md\`)** — the *rules*: how you, an AI agent, should behave here.
+2. **${link(N.memory)}** — the *state*: a fast-changing snapshot of where things stand right now (this quarter, what's urgent, who's on what). Read it to know the present.
+3. **${link(N.intel)}** — the *panorama*: the deep, slowly-evolving, authoritative picture of the whole business. Read it to understand context in depth.
 
-## How an agent should use this vault
-- Start at ${link(N.start)} and ${link(N.mission)} for context.
-- Before answering a question, read the relevant folder's \`CLAUDE.md\`.
-- Cite your sources with wikilinks to the exact note, e.g. ${link(N.declog)}.
-- When you learn something new, capture it in ${link(N.inbox)} — never lose a signal.
-- Decisions are sacred: never edit a past decision; add a new one that supersedes it.
+Three files, three jobs: rules vs. live state vs. deep reference. Don't collapse them.
+
+## How knowledge flows (the data pipeline)
+Things move left to right, and only the right-hand side is authoritative:
+
+\`Inbox/\`  →  \`Raw/\`  →  \`Wiki/\`  →  \`outputs/\`
+
+- **Inbox/** — everything enters here first (a thought, a forwarded note, a signal). Capture beats organising.
+- **Raw/** — if an item has lasting value, its *immutable source* (a transcript, a document, a clipping) is filed here. Never edit Raw; it is the evidence.
+- **Wiki/** — the distilled, human-readable truth. An agent and a human turn Raw into Wiki *through dialogue*, not by dumping. Humans read here.
+- **outputs/** — query results, reports, and summaries an agent generates land here. Disposable; regenerate any time.
+
+When you process the Inbox: keep lasting sources in Raw, distil meaning into the right \`Wiki/\` domain folder, and cite the Raw source you used.
+
+## Behavioral guardrails (watch the human for these)
+This brain has opinions. If you notice one of these patterns, say so and intervene:
+- **Scope creep** — a task quietly growing past its original mandate. *Intervention:* restate the original goal and ask what to cut.
+- **Research-instead-of-execute** — endless gathering that defers the actual decision. *Intervention:* name the decision that's being avoided and propose the smallest next action.
+- **Overgenerous negotiation** — giving away more than the situation requires. *Intervention:* ask for the walk-away line before conceding.
+- **Delaying reversible decisions** — treating a cheap, undoable choice as if it were permanent. *Intervention:* flag that it's reversible and push to decide now.
 
 ## Map
-- \`00_Company/\` — who we are · ${link(N.mission)}, ${link(N.structure)}, ${link(N.glossary)}
-- \`10_Strategy/\` — where we're going · ${link(N.strategy)}, ${link(N.kpi)}
-- \`20_Operations/\` — how we run · ${link(N.vendors)}
-- \`30_People/\` — who does what · ${link(N.onboarding)}
-- \`40_Decisions/\` — what we chose and why · ${link(N.declog)}
-- \`50_Meetings/\` — what we discussed
-- \`90_Inbox/\` — what we just captured · ${link(N.inbox)}
+- \`Inbox/\` — capture zone · ${link(N.cap1)}
+- \`Raw/\` — immutable sources · ${link(N.raw1)}
+- \`Wiki/00_Company/\` — ${link(N.mission)}, ${link(N.structure)}, ${link(N.glossary)}
+- \`Wiki/10_Strategy/\` — ${link(N.strategy)}, ${link(N.kpi)}
+- \`Wiki/20_Operations/\` — ${link(N.vendors)}
+- \`Wiki/30_People/\` — roles, onboarding, and the ${link(N.advTemplate)} advisor pattern
+- \`Wiki/40_Decisions/\` — ${link(N.declog)}
+- \`Wiki/50_Meetings/\` — meeting summaries
+- \`outputs/\` — generated answers (starts empty)
 `
   );
 
-  // ---- START_HERE (hub)
+  // ---- MEMORY.md (state snapshot)
+  put(
+    "MEMORY.md",
+    fm({ type: "memory", updated: todayMinus(2) }) +
+      `# MEMORY — ${C} (state snapshot)
+
+> The fast-changing working memory. An agent reads this **first** to know where things stand *right now*. Update it weekly. For the deep reference see ${link(N.intel)}; for the rules see the root \`CLAUDE.md\`.
+> Everything below is an example — **edit it to match your reality.**
+
+**Last updated:** ${todayMinus(2)}  ·  **Maintained by:** ${link(N.role(0))}
+
+## This quarter's focus
+${d.memory.quarter_focus}  _(edit me)_
+
+## Urgent / in-flight
+${d.memory.urgent.map((x) => `- [ ] ${x}`).join("\n")}
+
+## Team deployment (who's on what)
+${d.memory.team_deployment.map((x) => `- ${x}`).join("\n")}
+
+## Recent decisions
+${d.memory.recent_decisions.map((x) => `- ${x}`).join("\n")}
+
+See the full, permanent record in ${link(N.declog)}.
+` +
+      related([N.intel, N.declog, N.start, N.strategy])
+  );
+
+  // ---- Intelligence_snapshot.md (~80 line panorama starter)
+  const intelBody = d.intel_sections
+    .map(
+      (s) =>
+        `## ${s}\n_Prompt: in 3–5 lines, capture what an outsider must know about **${s.toLowerCase()}** to act correctly here. Replace this line._\n- \n`
+    )
+    .join("\n");
+  put(
+    "Intelligence_snapshot.md",
+    fm({ type: "intelligence", status: "starter" }) +
+      `# Intelligence Snapshot — ${C}
+
+> The authoritative, full-panorama view of the company. Unlike ${link(N.memory)} (a fast-changing state snapshot), this is the deep, slowly-evolving reference an agent reads to understand the *whole* business. Expand each section over time — the prompts are starting points, not the final text.
+> This is the long answer to "what's in a CLAUDE.md and why does it matter": the rules live in \`CLAUDE.md\`, the live state in ${link(N.memory)}, and the deep truth here.
+
+**How to use:** spend 20 minutes filling two or three sections you know cold. Ask Claude Code to interview you for the rest, one section per sitting.
+
+${intelBody}` +
+      related([N.memory, N.mission, N.strategy, N.declog, N.kpi])
+  );
+
+  // ---- START_HERE.md (30-day plan, updated for the data flow)
   put(
     "START_HERE.md",
     `# Start Here — ${C}
@@ -323,45 +434,135 @@ Welcome to the ${C} company brain. This is a 30-day plan to make it a habit. No 
 ## Why this exists
 The most valuable thing in a ${teamSize}-person company is context: why we made each call, how each job is done, what we're betting on. Today that lives in people's heads and in chat. This vault moves it somewhere durable that both your team and an AI assistant can read.
 
+## How it's organised (90 seconds)
+Knowledge flows in one direction: **Inbox → Raw → Wiki → outputs.**
+You capture anything into \`Inbox/\`. Sources worth keeping move to \`Raw/\`. The distilled truth lives in \`Wiki/\` (organised by topic — company, strategy, operations, people, decisions, meetings). When you ask the brain a question, the answer lands in \`outputs/\`.
+Three files at the root hold the memory: \`CLAUDE.md\` (the rules), ${link(N.memory)} (today's state), and ${link(N.intel)} (the deep picture).
+
 ## The 30-day plan
 
 **Week 1 — Capture meetings only.**
-Do nothing else. After every meeting, drop a few bullets into \`50_Meetings/\`. Don't organise, don't format. The only goal is to build the habit of writing things down. See ${link(N.onboarding)} for the rhythm.
+After every meeting, drop the transcript or a few bullets into \`Inbox/\`. Don't organise. The only goal is the habit of writing things down. The two notes already in \`Inbox/\` and \`Raw/\` show the format.
 
 **Week 2 — Add the decision log.**
-Start a note in ${link(N.declog)} each time you make a real choice: the options you weighed, what you picked, who owns it, and what would make you reverse it. Five minutes per decision.
+Each time you make a real choice, add a note in ${link(N.declog)}: the options, what you picked, who owns it, what would reverse it, and when to review it. Five minutes each.
 
 **Week 3 — Wire up Claude Code.**
-Point Claude Code at this folder. It reads the root \`CLAUDE.md\` and every folder's \`CLAUDE.md\` automatically, so it already knows how your company works. Ask it to file your week's meeting notes for you.
+Point Claude Code at this folder. It reads the root \`CLAUDE.md\` and every folder's \`CLAUDE.md\` automatically, so it already knows how your company works. Ask it to process your week's Inbox into the Wiki for you.
 
-**Week 4 — Ask your company a question.**
-Try it: "Based on our decision log, why did we choose our main vendor?" or "Summarise the risks to our ${d.bets[0].name} bet." The answer comes back with links to the exact notes. That's the payoff — your company can now answer questions about itself.
+**Week 4 — Ask your company a question, and build an advisor.**
+Try: "Based on our decision log, why did we choose our lead vendor?" — the answer comes back with links to the exact notes. Then run \`/build-advisor\` to create an AI advisor tuned to the decisions *you* actually face. See ${link(N.advTemplate)}.
 
 ## Jump in
-- Our reason for being → ${link(N.mission)}
+- Today's state → ${link(N.memory)}
+- The deep picture → ${link(N.intel)}
+- Why we exist → ${link(N.mission)}
 - Where we're headed → ${link(N.strategy)} and ${link(N.kpi)}
 - A real decision → ${link(N.declog)}
-- How we run day to day → ${link(N.vendors)}
-- Capture anything new → ${link(N.inbox)}
+- Build your own advisors → ${link(N.advTemplate)}
 `
   );
 
-  // ---- 00_Company
+  // ======================================================================
+  // Inbox/  Raw/  outputs/  — the data-flow folders
+  // ======================================================================
   put(
-    "00_Company/CLAUDE.md",
-    `# Agent guide — 00_Company
+    "Inbox/CLAUDE.md",
+    `# Agent guide — Inbox/ (the front door)
 
-This folder holds the company's identity: mission, structure, and shared language.
+Everything enters here first. Capturing always beats organising.
+
+**Your job when triaging the Inbox:**
+${d.inbox_rules.map((r) => `- ${r}`).join("\n")}
+
+Flow: an item either becomes an immutable source in \`Raw/\`, gets distilled into a \`Wiki/\` note through dialogue, or is dropped. Never let the Inbox go stale — process it weekly. A full inbox is fine; a *stale* one is not.
+`
+  );
+  put(
+    `Inbox/${N.cap1}.md`,
+    fm({ type: "capture", captured: todayMinus(1) }) +
+      `# Capture: ${d.bets[0].name} follow-up
+
+_Captured ${todayMinus(1)} — raw, unprocessed. This is what "just write it down" looks like._
+
+Quick thought on our ${link(N.bet(0))} bet: worth pressure-testing next week. If it holds up, it becomes a decision in ${link(N.declog)}; if it needs a source document, that goes to Raw/.
+` +
+      related([N.bet(0), N.declog])
+  );
+  put(
+    `Inbox/${N.cap2}.md`,
+    fm({ type: "capture", captured: todayMinus(1) }) +
+      `# Capture: ${d.kpis[0].name} signal
+
+_Captured ${todayMinus(1)} — a metric signal to file._
+
+Noticed movement in **${d.kpis[0].name}**. Link it to ${link(N.kpi)} and check whether it changes any ${link(N.strategy)} assumption.
+` +
+      related([N.kpi, N.strategy])
+  );
+
+  put(
+    "Raw/CLAUDE.md",
+    `# Agent guide — Raw/ (immutable sources)
+
+This folder holds the **evidence**: meeting transcripts, source documents, clippings — exactly as captured.
+
+**Rules:**
+- **Never edit a file in Raw/.** It is the unaltered source of truth. If something is wrong, add a correction in the Wiki, not here.
+- Each Raw file should be *cited* by the Wiki note it informs (e.g. a ${link(N.declog)} entry links its source transcript under "Linked Memos").
+- Raw is append-only. Distillation happens in \`Wiki/\`, never here.
+`
+  );
+  const rawTranscript = (m, daysAgo) =>
+    fm({ type: "transcript", source: "meeting", date: todayMinus(daysAgo) }) +
+    `# Transcript: ${m.title}
+
+_Raw, immutable. Filed ${todayMinus(daysAgo)}. Type: ${m.type}. Attendees: ${(m.attendees || []).join(", ")}._
+
+> [00:00] **${(m.attendees || ["Facilitator"])[0]}:** Let's start. ${m.notes}
+> [04:12] **${(m.attendees || ["", "Second"])[1] || "Team"}:** Agreed — let's make that a decision and write down what would make us reverse it.
+> [09:30] **${(m.attendees || ["Facilitator"])[0]}:** Good. Someone owns it, we set a review date, done.
+
+This transcript is the source behind the summary in ${link(N.meet(m === d.meetings[0] ? 0 : 1))}.
+`;
+  put(`Raw/${N.raw1}.md`, rawTranscript(d.meetings[0], 7) + related([N.meet(0), N.declog]));
+  put(`Raw/${N.raw2}.md`, rawTranscript(d.meetings[1], 14) + related([N.meet(1), N.declog]));
+
+  put(
+    "outputs/CLAUDE.md",
+    `# Agent guide — outputs/ (generated products)
+
+Query results, reports, and summaries an agent produces land here — for example the answer to "summarise every decision that touched pricing."
+
+**Rules:**
+- Everything here is **disposable**. It is derived from \`Wiki/\` and \`Raw/\`; regenerate it any time.
+- Never let an \`outputs/\` file become the source of truth. If a generated summary contains a new fact, that fact belongs in the Wiki.
+- Name outputs by the question they answer and the date, so they're easy to prune.
+
+This folder starts empty — it fills up the first time you ask the brain a question with Claude Code.
+`
+  );
+
+  // ======================================================================
+  // Wiki/  — domain-oriented subfolders (the distilled truth)
+  // ======================================================================
+
+  // ---- Wiki/00_Company
+  put(
+    "Wiki/00_Company/CLAUDE.md",
+    `# Agent guide — Wiki/00_Company
+
+The company's identity: mission, structure, and shared language.
 
 When working here:
 - Treat ${link(N.mission)} as the source of truth for *why we exist*. Don't contradict it.
 - Keep ${link(N.glossary)} authoritative: if a term is used elsewhere, define it here.
-- ${link(N.structure)} should always reflect the current ${teamSize}-person org. If a role changes, update it and link the affected ${link(N.role(0))} note.
-- This folder is mostly stable. Prefer adding to it over rewriting it.
+- ${link(N.structure)} reflects the current ${teamSize}-person org. If a role changes, update it and the affected ${link(N.role(0))} note.
+- This folder is mostly stable. Prefer adding over rewriting.
 `
   );
   put(
-    "00_Company/Mission and Vision.md",
+    "Wiki/00_Company/Mission and Vision.md",
     fm({ type: "company", status: "living" }) +
       `# Mission and Vision
 
@@ -374,13 +575,12 @@ ${d.mission}
 - Decisions over opinions. We keep a written ${link(N.declog)} so we can learn from our own track record.
 - Focus beats breadth, especially at ${teamSize} people. Our bets are deliberate; see ${link(N.strategy)}.
 
-## How we measure it
-The mission is real only if the numbers move. We track that in ${link(N.kpi)}.
+The fast-moving version of "where we are against this" lives in ${link(N.memory)}; the depth lives in ${link(N.intel)}.
 ` +
-      related([N.structure, N.strategy, N.glossary])
+      related([N.structure, N.strategy, N.glossary, N.intel])
   );
   put(
-    "00_Company/Company Structure.md",
+    "Wiki/00_Company/Company Structure.md",
     fm({ type: "company", team_size: teamSize }) +
       `# Company Structure
 
@@ -396,7 +596,7 @@ New joiners should read ${link(N.onboarding)} first.
       related([N.mission, N.role(0), N.role(1), N.onboarding])
   );
   put(
-    "00_Company/Glossary.md",
+    "Wiki/00_Company/Glossary.md",
     fm({ type: "company", status: "living" }) +
       `# Glossary
 
@@ -407,26 +607,26 @@ ${d.glossary.map((g) => `- **${g.term}** — ${g.def}`).join("\n")}
       related([N.mission, N.strategy])
   );
 
-  // ---- 10_Strategy
+  // ---- Wiki/10_Strategy
   put(
-    "10_Strategy/CLAUDE.md",
-    `# Agent guide — 10_Strategy
+    "Wiki/10_Strategy/CLAUDE.md",
+    `# Agent guide — Wiki/10_Strategy
 
-This folder holds where we're going: the annual strategy, our active bets, and the risks against them.
+Where we're going: the annual strategy, our active bets, and the risks against them.
 
 When working here:
-- Every **bet** note must state a one-sentence thesis and link at least one ${link(N.kpi)} metric that proves or kills it.
-- Every **risk** note must name an exposure *and* a mitigation, and link the bet it threatens.
+- Every **bet** note states a one-sentence thesis and links at least one ${link(N.kpi)} metric that proves or kills it.
+- Every **risk** note names an exposure *and* a mitigation, and links the bet it threatens.
 - ${link(N.strategy)} is the hub — keep its links to bets and risks current.
-- Don't invent new strategy here; reflect decisions recorded in ${link(N.declog)}.
+- Don't invent strategy here; reflect decisions recorded in ${link(N.declog)}.
 `
   );
   put(
-    "10_Strategy/Annual Strategy.md",
+    "Wiki/10_Strategy/Annual Strategy.md",
     fm({ type: "strategy", horizon: "annual", status: "active" }) +
       `# Annual Strategy
 
-${C}'s plan for the year. The strategy is the sum of a few deliberate bets, the risks we accept, and the numbers that tell us we're winning.
+${C}'s plan for the year — a few deliberate bets, the risks we accept, and the numbers that tell us we're winning.
 
 ## Our bets
 ${d.bets.map((b, i) => `- ${link(N.bet(i))} — ${b.thesis}`).join("\n")}
@@ -435,24 +635,23 @@ ${d.bets.map((b, i) => `- ${link(N.bet(i))} — ${b.thesis}`).join("\n")}
 ${d.risks.map((r, i) => `- ${link(N.risk(i))} — ${r.exposure}`).join("\n")}
 
 ## How we'll know it's working
-Tracked in ${link(N.kpi)}. The strategy connects back to ${link(N.mission)}.
+Tracked in ${link(N.kpi)}. Connects back to ${link(N.mission)}.
 ` +
       related([
         N.bet(0), N.bet(1), N.bet(2), N.bet(3),
-        N.risk(0), N.risk(1), N.risk(2),
-        N.kpi, N.mission,
+        N.risk(0), N.risk(1), N.risk(2), N.kpi, N.mission,
       ])
   );
   d.bets.forEach((b, i) => {
     const kpi = d.kpis[i % d.kpis.length].name;
     put(
-      `10_Strategy/${N.bet(i)}.md`,
+      `Wiki/10_Strategy/${N.bet(i)}.md`,
       fm({ type: "bet", status: "active", owner: d.roles[i % d.roles.length].title }) +
         `# Bet: ${b.name}
 
 **Thesis.** ${b.thesis}
 
-**Why now.** This is one of ${C}'s active wagers for the year — see ${link(N.strategy)}.
+**Why now.** One of ${C}'s active wagers for the year — see ${link(N.strategy)}.
 
 **What proves it.** Watch **${kpi}** in ${link(N.kpi)}.
 
@@ -465,7 +664,7 @@ Tracked in ${link(N.kpi)}. The strategy connects back to ${link(N.mission)}.
   });
   d.risks.forEach((r, i) => {
     put(
-      `10_Strategy/${N.risk(i)}.md`,
+      `Wiki/10_Strategy/${N.risk(i)}.md`,
       fm({ type: "risk", severity: ["high", "medium", "medium"][i] || "medium" }) +
         `# Risk: ${r.name}
 
@@ -475,44 +674,44 @@ Tracked in ${link(N.kpi)}. The strategy connects back to ${link(N.mission)}.
 
 **Threatens.** ${link(N.bet(i % d.bets.length))} — and through it, the wider ${link(N.strategy)}.
 
-If this risk materialises, a decision should be logged in ${link(N.declog)}.
+If this risk materialises, log a decision in ${link(N.declog)}.
 ` +
         related([N.bet(i % d.bets.length), N.strategy, N.declog])
     );
   });
   put(
-    "10_Strategy/KPI Dashboard.md",
+    "Wiki/10_Strategy/KPI Dashboard.md",
     fm({ type: "strategy", cadence: "monthly" }) +
       `# KPI Dashboard
 
-The handful of numbers that tell ${C} whether the ${link(N.strategy)} is working. Reviewed monthly.
+The handful of numbers that tell ${C} whether the ${link(N.strategy)} is working. Reviewed monthly; the live reading lives in ${link(N.memory)}.
 
 | Metric | Target |
 |---|---|
 ${d.kpis.map((k) => `| ${k.name} | ${k.target} |`).join("\n")}
 
-Each metric should map to at least one bet. Start with ${link(N.bet(0))} and ${link(N.bet(1))}.
+Each metric maps to at least one bet. Start with ${link(N.bet(0))} and ${link(N.bet(1))}.
 ` +
-      related([N.strategy, N.bet(0), N.bet(1), N.mission])
+      related([N.strategy, N.bet(0), N.bet(1), N.memory])
   );
 
-  // ---- 20_Operations
+  // ---- Wiki/20_Operations
   put(
-    "20_Operations/CLAUDE.md",
-    `# Agent guide — 20_Operations
+    "Wiki/20_Operations/CLAUDE.md",
+    `# Agent guide — Wiki/20_Operations
 
-This folder holds how we actually run: playbooks, SOPs, and vendor notes.
+How we actually run: playbooks, SOPs, and vendor notes.
 
 When working here:
 - A **playbook** must be runnable by a new hire with no supervision — concrete numbered steps, not principles.
-- Link each playbook to the ${link(N.role(0))} who owns it and to any ${link(N.vendors)} it depends on.
-- When a process changes because of a decision, link the relevant note in ${link(N.declog)}.
+- Link each playbook to the ${link(N.role(0))} who owns it and any ${link(N.vendors)} it depends on.
+- When a process changes because of a decision, link the relevant ${link(N.declog)} note.
 - Keep ${link(N.vendors)} current; an outdated vendor list is worse than none.
 `
   );
   d.playbooks.forEach((p, i) => {
     put(
-      `20_Operations/${N.play(i)}.md`,
+      `Wiki/20_Operations/${N.play(i)}.md`,
       fm({ type: "playbook", owner: d.roles[i % d.roles.length].title }) +
         `# Playbook: ${p.title}
 
@@ -522,42 +721,40 @@ A repeatable procedure for ${C}. Owned by ${link(N.role(i % d.roles.length))}.
 ${(p.steps || []).map((s, j) => `${j + 1}. ${s}`).join("\n")}
 
 ## Dependencies
-Relies on ${link(N.vendors)}. If you improve this playbook, note why in ${link(N.inbox)}.
+Relies on ${link(N.vendors)}. If you improve this playbook, capture why in the Inbox: ${link(N.cap1)}-style.
 ` +
-        related([N.vendors, N.role(i % d.roles.length), N.inbox])
+        related([N.vendors, N.role(i % d.roles.length), N.declog])
     );
   });
   put(
-    "20_Operations/Vendor Notes.md",
+    "Wiki/20_Operations/Vendor Notes.md",
     fm({ type: "operations", status: "living" }) +
       `# Vendor Notes
 
 The outside partners ${C} depends on, and what each is for. Selecting a new one? Follow ${link(N.play(2))}.
 
-${d.vendors
-  .map((v) => `- **${v.name}** _(${v.category})_ — ${v.use}`)
-  .join("\n")}
+${d.vendors.map((v) => `- **${v.name}** _(${v.category})_ — ${v.use}`).join("\n")}
 ` +
       related([N.play(0), N.play(2), N.declog])
   );
 
-  // ---- 30_People
+  // ---- Wiki/30_People  (+ advisor factory)
   put(
-    "30_People/CLAUDE.md",
-    `# Agent guide — 30_People
+    "Wiki/30_People/CLAUDE.md",
+    `# Agent guide — Wiki/30_People
 
-This folder holds who does what: roles, onboarding, and 1-on-1 templates.
+Who does what: roles, onboarding, and the **advisor factory**.
 
 When working here:
-- Each **role** note states a single clear mandate and the playbooks that role owns.
+- Each **role** note states a single clear mandate and the playbooks it owns.
 - ${link(N.onboarding)} is the first thing a new hire reads — keep it to the first 14 days.
 - Never put performance details or sensitive personal data in the brain. Roles and mandates only.
-- Link roles back to ${link(N.structure)}.
+- **Advisors:** ${link(N.advTemplate)} is the schema for any advisor; ${link(N.advRouter)} maps decision types to advisors. Build new ones with \`/build-advisor\`; invoke one with \`/advisor <name> <topic>\`.
 `
   );
   d.roles.forEach((r, i) => {
     put(
-      `30_People/${N.role(i)}.md`,
+      `Wiki/30_People/${N.role(i)}.md`,
       fm({ type: "role" }) +
         `# Role: ${r.title}
 
@@ -573,25 +770,25 @@ When working here:
     );
   });
   put(
-    "30_People/Onboarding.md",
+    "Wiki/30_People/Onboarding.md",
     fm({ type: "people", status: "living" }) +
       `# Onboarding — First 14 Days
 
-How a new joiner at ${C} gets productive fast. The whole plan is: read the brain, shadow the rhythm, own one thing.
+How a new joiner at ${C} gets productive fast: read the brain, shadow the rhythm, own one thing.
 
 ## Day 1–2 — Context
-Read ${link(N.start)}, ${link(N.mission)}, and ${link(N.structure)}. Skim ${link(N.glossary)}.
+Read ${link(N.start)}, ${link(N.mission)}, ${link(N.memory)}, and ${link(N.structure)}. Skim ${link(N.glossary)}.
 
 ## Day 3–7 — Rhythm
-Sit in on meetings (filed in ${link(N.meet(0))} style) and read the latest ${link(N.declog)}.
+Sit in on meetings (see ${link(N.meet(0))}) and read the latest ${link(N.declog)}.
 
 ## Day 8–14 — Ownership
 Pick up one ${link(N.role(0))}-style responsibility and run your first 1-on-1 with ${link(N.oneonone)}.
 ` +
-      related([N.start, N.structure, N.role(0), N.oneonone])
+      related([N.start, N.memory, N.structure, N.role(0), N.oneonone])
   );
   put(
-    "30_People/1on1 Template.md",
+    "Wiki/30_People/1on1 Template.md",
     fm({ type: "template" }) +
       `# 1-on-1 Template
 
@@ -608,47 +805,130 @@ New to the team? Start from ${link(N.onboarding)}.
       related([N.onboarding, N.role(0)])
   );
 
-  // ---- 40_Decisions
+  // ---- advisor template (the schema)
   put(
-    "40_Decisions/CLAUDE.md",
-    `# Agent guide — 40_Decisions
+    "Wiki/30_People/_advisor_template.md",
+    fm({ type: "advisor-template", status: "meta" }) +
+      `# Advisor Template (the schema for any advisor)
 
-This is the most important folder in the company. It is the written memory of every consequential choice.
+> We don't hand you a fixed panel of gurus. We give you a **way to build your own** — advisors tuned to the decisions *you* actually face. This file is the schema; ${link(N.advisor)} is one worked example; ${link(N.advRouter)} routes decisions to advisors. Run \`/build-advisor\` to create more.
 
-**Non-negotiable rules for every decision note:**
-- Record the **options considered** (at least two real alternatives).
-- Name a single **owner** — the one person accountable.
-- State the **reversal conditions** — what signal would make us undo this.
-- Capture the **rationale** in plain language a future hire can follow.
+Every advisor is one note with these sections:
+
+**1. Name** — a real or fictional figure whose judgement fits a class of your decisions.
+**2. When to invoke** — the decision types that should trigger this advisor.
+**3. Core methodology** — 1–2 paragraphs on how they actually think.
+**4. Question framework** — the specific sequence of questions they ask.
+**5. Output format** — how they structure their analysis (e.g. recommendation, then risks, then the one thing that would change their mind).
+**6. Anti-patterns** — when this advisor is *wrong*, and what they systematically miss.
+**7. Worked example** — the advisor applied to one real decision from your ${link(N.declog)}.
+
+## How to use
+- To invoke an existing advisor on a question: \`/advisor <name> <topic>\`.
+- To discover decision types and build advisors for them: \`/build-advisor\`.
+- Register each advisor in ${link(N.advRouter)} so the right one (or the right *combination*) is suggested automatically.
+` +
+      related([N.advisor, N.advRouter, N.declog])
+  );
+
+  // ---- one worked example advisor (industry-picked by the LLM)
+  put(
+    `Wiki/30_People/${N.advisor}.md`,
+    fm({ type: "advisor", status: "example" }) +
+      `# Advisor: ${d.advisor.name}
+
+_A worked example built from ${link(N.advTemplate)}. Replace or add your own with \`/build-advisor\`._
+
+**Persona.** ${d.advisor.persona}
+
+## When to invoke
+${d.advisor.when_to_invoke} In practice, reach for ${d.advisor.name} on decisions like the ones in ${link(N.declog)} — especially ${link(N.dec(0))}.
+
+## Core methodology
+${d.advisor.core_method}
+
+## Question framework
+1. What decision are we actually making, and is it reversible?
+2. What does the evidence in ${link(N.intel)} and the live state in ${link(N.memory)} say?
+3. Who is the single owner, and what is the one metric that proves this worked?
+4. What would have to be true for this to be a mistake?
+
+## Output format
+- **Recommendation** (one line)
+- **Why** (tied to the methodology above)
+- **The one thing that would change my mind**
+- **Suggested entry for ${link(N.declog)}** (options, owner, reversal, review date)
+
+## Anti-patterns (when ${d.advisor.name} is wrong)
+- Over-indexes on what's measurable; may undervalue a slow-building, hard-to-quantify bet such as ${link(N.bet(1))}.
+- Best on operational and reversible calls; for irreversible, mission-level bets, pair with a second advisor via ${link(N.advRouter)}.
+
+## Worked example
+Applied to ${link(N.dec(0))}: ${d.advisor.name} would ask whether the choice is reversible (it is), insist on one owner, and back the option that buys the most learning for the least commitment.
+` +
+      related([N.advTemplate, N.advRouter, N.dec(0), N.declog])
+  );
+
+  // ---- advisor router
+  put(
+    "Wiki/30_People/_advisor_router.md",
+    fm({ type: "advisor-router", status: "meta" }) +
+      `# Advisor Router (decision type → advisor)
+
+> Maps the kinds of decisions you face to the advisor (or *combination* of advisors) best suited to them. \`/build-advisor\` keeps this current as you add advisors.
+
+| Decision type | Advisor(s) | Why |
+|---|---|---|
+| Process, hiring, expansion pace | ${link(N.advisor)} | ${d.advisor.when_to_invoke} |
+| _(add your own)_ | _(name)_ | _(when to invoke)_ |
+| _(add your own)_ | _(name + name — a combination)_ | _(for decisions that need two lenses)_ |
+
+Start from the schema in ${link(N.advTemplate)} and the worked example ${link(N.advisor)}. Route any logged choice in ${link(N.declog)} to the matching row.
+` +
+      related([N.advTemplate, N.advisor, N.declog])
+  );
+
+  // ---- Wiki/40_Decisions  (enhanced template)
+  put(
+    "Wiki/40_Decisions/CLAUDE.md",
+    `# Agent guide — Wiki/40_Decisions
+
+The most important folder in the company: the written memory of every consequential choice.
+
+**Every decision note MUST record all six fields:**
+- **Options Considered** — at least two real alternatives.
+- **Owner** — the single person accountable.
+- **Decision Date** — when it was made.
+- **Reversal Conditions** — the signal that would make us undo it.
+- **Linked Memos** — the \`Raw/\` source(s) and meetings behind it.
+- **Six-month Review Date** — when we revisit whether it still holds.
+
+See ${link(N.dec(0))} for a fully filled-in example.
 
 **Never edit a past decision.** If a decision changes, write a *new* note that supersedes it and link back. Keep ${link(N.declog)} as the index of everything.
 `
   );
   put(
-    "40_Decisions/Decision Log.md",
+    "Wiki/40_Decisions/Decision Log.md",
     fm({ type: "decision-index", status: "living" }) +
       `# Decision Log
 
-Every consequential choice ${C} has made, newest first. Click any decision to see the options, the owner, and what would make us reverse it.
+Every consequential choice ${C} has made, newest first. Click any decision for the options, the owner, the reversal conditions, and the review date.
 
 ${d.decisions.map((x, i) => `- ${link(N.dec(i))} — *${x.choice}*`).join("\n")}
 
-This log is the backbone of the brain — it connects to ${link(N.strategy)} and feeds ${link(N.onboarding)}.
+The backbone of the brain — connects to ${link(N.strategy)} and feeds ${link(N.memory)}.
 ` +
-      related([
-        N.dec(0), N.dec(1), N.dec(2), N.dec(3), N.dec(4), N.strategy,
-      ])
+      related([N.dec(0), N.dec(1), N.dec(2), N.dec(3), N.dec(4), N.strategy, N.memory])
   );
   d.decisions.forEach((dec, i) => {
-    const owner = d.roles[i % d.roles.length].title;
     const meetIdx = i % d.meetings.length;
+    const linkedRaw = i === 0 ? N.raw1 : i === 1 ? N.raw2 : null;
+    const memos = [link(N.meet(meetIdx))].concat(linkedRaw ? [link(linkedRaw)] : []);
     put(
-      `40_Decisions/${N.dec(i)}.md`,
-      fm({ type: "decision", date: todayMinus((i + 1) * 9), owner }) +
+      `Wiki/40_Decisions/${N.dec(i)}.md`,
+      fm({ type: "decision", date: todayMinus((i + 1) * 9), owner: d.roles[i % d.roles.length].title }) +
         `# Decision: ${dec.title}
-
-**Date.** ${todayMinus((i + 1) * 9)}
-**Owner.** ${link(N.role(i % d.roles.length))}
 
 ## Context
 ${dec.context}
@@ -659,81 +939,105 @@ ${(dec.options || []).map((o) => `- ${o}`).join("\n")}
 ## Decision
 **${dec.choice}.** ${dec.rationale}
 
+## Owner
+${link(N.role(i % d.roles.length))}
+
+## Decision date
+${todayMinus((i + 1) * 9)}
+
 ## Reversal conditions
 ${dec.reversal}
 
-## Trace
-This choice supports ${link(N.bet(i % d.bets.length))} and was discussed in ${link(N.meet(meetIdx))}. Indexed in ${link(N.declog)}.
+## Linked memos
+${memos.map((m) => `- ${m}`).join("\n")}
+
+## Six-month review date
+${todayPlus(180 - (i + 1) * 9)} — revisit whether this still holds.
 ` +
-        related([N.declog, N.bet(i % d.bets.length), N.meet(meetIdx), N.role(i % d.roles.length)])
+        related(
+          [N.declog, N.bet(i % d.bets.length), N.meet(meetIdx), N.role(i % d.roles.length)]
+            .concat(linkedRaw ? [linkedRaw] : [])
+        )
     );
   });
 
-  // ---- 50_Meetings
+  // ---- Wiki/50_Meetings
   put(
-    "50_Meetings/CLAUDE.md",
-    `# Agent guide — 50_Meetings
+    "Wiki/50_Meetings/CLAUDE.md",
+    `# Agent guide — Wiki/50_Meetings
 
-This folder holds meeting summaries, ideally filed automatically by an agent.
+Meeting summaries, distilled from transcripts in \`Raw/\`.
 
 When working here:
-- One note per meeting. Capture **decisions** and **owners**, not a transcript.
+- One note per meeting. Capture **decisions** and **owners**, not a transcript (the transcript lives in \`Raw/\`).
 - If a meeting produced a decision, create the note in ${link(N.declog)} and link it both ways.
-- Title format: \`Meeting - <topic>\`. Include the date and who was there.
-- Unsure where something goes? Drop it in ${link(N.inbox)} and let triage sort it.
+- Each summary should cite its source transcript in \`Raw/\`.
+- Title format: \`Meeting - <topic>\`, with date and attendees.
 `
   );
   d.meetings.forEach((m, i) => {
     const decIdx = i % d.decisions.length;
+    const src = i === 0 ? N.raw1 : i === 1 ? N.raw2 : null;
     put(
-      `50_Meetings/${N.meet(i)}.md`,
+      `Wiki/50_Meetings/${N.meet(i)}.md`,
       fm({ type: "meeting", date: todayMinus((i + 1) * 7), category: m.type }) +
         `# ${m.title}
 
 **Date.** ${todayMinus((i + 1) * 7)}  ·  **Type.** ${m.type}
 **Attendees.** ${(m.attendees || []).join(", ")}
-
+${src ? `**Source transcript.** ${link(src)} (immutable, in Raw/)\n` : ""}
 ## Summary
 ${m.notes}
 
 ## Decisions made
-This meeting fed ${link(N.dec(decIdx))}. See the full ${link(N.declog)}.
+Fed ${link(N.dec(decIdx))}. See the full ${link(N.declog)}.
 ` +
-        related([N.dec(decIdx), N.declog, N.role(i % d.roles.length)])
+        related([N.dec(decIdx), N.declog, N.role(i % d.roles.length)].concat(src ? [src] : []))
     );
   });
 
-  // ---- 90_Inbox
+  // ======================================================================
+  // .claude/commands — visitor-facing advisor commands (also in skeleton/)
+  // ======================================================================
   put(
-    "90_Inbox/CLAUDE.md",
-    `# Agent guide — 90_Inbox
+    ".claude/commands/build-advisor.md",
+    `---
+description: Discover the decision types in your vault and build custom AI advisors for them
+allowed-tools: Read, Glob, Grep, Write
+---
 
-This is the capture zone. Anything unsorted lands here first — capturing always beats organising.
+# /build-advisor — advisor factory
 
-**Triage rules for an agent:**
-${d.inbox_rules.map((r) => `- ${r}`).join("\n")}
+You are an **advisor factory**. You don't impose a fixed panel of gurus; you help the user build advisors tuned to the decisions *they* actually face. Work interactively.
 
-Empty this folder regularly. A full inbox is fine; a *stale* inbox is not.
+## Steps
+1. **Scan** \`Raw/\` and \`Wiki/40_Decisions/\` to identify the 3–5 recurring *decision types* this company faces (e.g. pricing, hiring, vendor commitments, expansion). Summarise what you found.
+2. **Ask the user:** "For each of these decision types, which figure in history — real or fictional — would be the best advisor, and why?" Wait for their answer.
+3. For each named advisor, **draft a note** \`Wiki/30_People/Advisor - <name>.md\` following the schema in \`Wiki/30_People/_advisor_template.md\` (Name · When to invoke · Core methodology · Question framework · Output format · Anti-patterns · Worked example). Tie the worked example to a real entry in the Decision Log.
+4. **Ask the user to review and edit** each draft before finalising.
+5. **Optionally update** \`Wiki/30_People/_advisor_router.md\`, adding a row mapping each decision type to its advisor (or a *combination* of advisors for decisions that need two lenses).
+
+Keep advisors graph-visible as Wiki notes. If one becomes heavily used, suggest promoting it into a reusable Claude Code skill (\`.claude/skills/<name>/SKILL.md\`).
 `
   );
   put(
-    "90_Inbox/Inbox.md",
-    fm({ type: "inbox", status: "capture" }) +
-      `# Inbox
+    ".claude/commands/advisor.md",
+    `---
+description: Invoke one of your advisors on a topic — /advisor <name> <topic>
+argument-hint: <name> <topic>
+allowed-tools: Read, Glob, Grep
+---
 
-Drop anything here — a thought, a meeting note, a signal — and let triage file it later.
+# /advisor — consult an advisor
 
-## Triage rules
-${d.inbox_rules.map((r) => `- ${r}`).join("\n")}
+Consult the advisor named **$1** on the topic: **$2**.
 
-## Where things go
-- Decisions → ${link(N.declog)}
-- Meetings → ${link(N.meet(0))}
-- Metrics → ${link(N.kpi)}
-
-New here? Read ${link(N.start)}.
-` +
-      related([N.declog, N.kpi, N.start])
+## Steps
+1. **Read** the advisor's note at \`Wiki/30_People/Advisor - $1.md\`. If it doesn't exist, list the advisors in \`Wiki/30_People/\` and ask the user to pick one (or to run \`/build-advisor\` to create it).
+2. **Ground** the analysis: read \`MEMORY.md\` for current state and skim \`Intelligence_snapshot.md\` and the relevant \`Wiki/40_Decisions/\` notes for context.
+3. **Run the advisor's own Question framework** from their note, then produce their analysis in their **Output format** — staying in character with their Core methodology, and honestly noting their Anti-patterns where relevant.
+4. **Close** with a suggested \`Wiki/40_Decisions/\` entry (options, owner, reversal conditions, six-month review date) if a decision is warranted.
+`
   );
 
   return files;
@@ -743,10 +1047,7 @@ New here? Read ${link(N.start)}.
 // 3. write + zip + report
 // ----------------------------------------------------------------------------
 function writeAll(map) {
-  if (existsSync(outDir) && SKELETON) {
-    // refresh skeleton cleanly
-    rmSync(outDir, { recursive: true, force: true });
-  }
+  if (existsSync(outDir) && SKELETON) rmSync(outDir, { recursive: true, force: true });
   for (const [rel, body] of Object.entries(map)) {
     const full = join(outDir, rel);
     mkdirSync(join(full, ".."), { recursive: true });
@@ -755,11 +1056,9 @@ function writeAll(map) {
 }
 
 function countLinks(map) {
-  let total = 0;
-  let minLinks = Infinity;
-  let hubs = 0;
+  let total = 0, minLinks = Infinity, hubs = 0;
   const sampleNotes = Object.entries(map).filter(
-    ([p]) => !p.endsWith("CLAUDE.md")
+    ([p]) => !p.endsWith("CLAUDE.md") && !p.startsWith(".claude/")
   );
   for (const [, body] of sampleNotes) {
     const n = (body.match(/\[\[/g) || []).length;
@@ -768,10 +1067,10 @@ function countLinks(map) {
     if (n >= 6) hubs++;
   }
   return {
-    notes: Object.keys(map).length,
+    files: Object.keys(map).length,
     sampleNotes: sampleNotes.length,
     links: total,
-    minLinksInSample: minLinks,
+    minLinksInSample: minLinks === Infinity ? 0 : minLinks,
     hubs,
   };
 }
@@ -780,7 +1079,6 @@ async function zipVault() {
   mkdirSync(zipDir, { recursive: true });
   const zipPath = join(zipDir, `${slug}.zip`);
   rmSync(zipPath, { force: true });
-  // zip the vault dir, stored relative to its parent
   await execFileP("zip", ["-r", "-q", zipPath, "."], { cwd: outDir });
   return zipPath;
 }
@@ -799,28 +1097,23 @@ const secs = ((Date.now() - t0) / 1000).toFixed(1);
 
 if (SKELETON) {
   console.log(`\n✅ Skeleton written to ${outDir}`);
-  console.log(
-    `   ${stats.notes} files · ${stats.sampleNotes} sample notes · ${stats.links} wikilinks · ${stats.hubs} hubs`
-  );
+  console.log(`   ${stats.files} files · ${stats.sampleNotes} sample notes · ${stats.links} wikilinks · ${stats.hubs} hubs`);
 } else {
   console.log(`\n🧠  Company brain blueprint generated for: ${industry} (${teamSize})${focus ? ` — ${focus}` : ""}`);
-  console.log(`    Company: ${data.company_name}`);
-  console.log(`    Data source: ${source}   ·   Wall time: ${secs}s`);
+  console.log(`    Company: ${data.company_name}   ·   Advisor: ${data.advisor.name}`);
+  console.log(`    Model: ${source}   ·   Wall time: ${secs}s`);
   console.log(`\n📁  Vault: ${outDir}`);
-  console.log(
-    `    ${stats.notes} files · ${stats.sampleNotes} sample notes · ${stats.links} wikilinks · ${stats.hubs} hub notes (6+ links) · min links/note ${stats.minLinksInSample}`
-  );
+  console.log(`    ${stats.files} files · ${stats.sampleNotes} sample notes · ${stats.links} wikilinks · ${stats.hubs} hub notes (6+ links) · min links/note ${stats.minLinksInSample}`);
   if (zipPath) console.log(`📦  Zip:   ${zipPath}`);
   console.log(`\n👉  Open in Obsidian:`);
-  console.log(`    open -a Obsidian "${outDir}"`);
-  console.log(`    (or: Obsidian → Open folder as vault → choose the path above)\n`);
+  console.log(`    open -a Obsidian "${outDir}"\n`);
 }
 
-// machine-readable line for the harness / test runner
 console.log(
   "REPORT_JSON " +
     JSON.stringify({
-      industry, teamSize, focus, company: data.company_name, source,
-      seconds: Number(secs), outDir, zipPath, ...stats,
+      industry, teamSize, focus, company: data.company_name,
+      advisor: data.advisor.name, source, seconds: Number(secs),
+      outDir, zipPath, ...stats,
     })
 );
