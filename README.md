@@ -141,6 +141,38 @@ It writes a fresh, industry-flavored vault (40+ interlinked notes, every folder'
 
 ---
 
+## Adapting it to your industry (the demo is just an example)
+
+If you saw this at a live demo, the showcase vault was a six-person **mining exploration** company running an eight-country portfolio. That story is a worked example, nothing more — the architecture is deliberately industry-neutral. Here is exactly what changes for your industry, and what never does.
+
+**Changes with your industry — and `/brain-blueprint` re-seeds all of it automatically:**
+
+- Company name, role titles, KPI names, and glossary terms across the sample notes
+- The decision topics in `Wiki/40_Decisions/` (a clinic chain debates site openings; a PE fund debates exits; an exploration company debates country entries)
+- The stakeholder list in `Wiki/30_People/Your Profile.md` (communication style profile)
+- The OKR prompts in `Wiki/10_Strategy/_goal-alignment-template.md`
+- The worked-example advisor (healthcare → a public-health pioneer; private equity → a famous dealmaker)
+
+**Never changes, in any industry:**
+
+- The one-way flow: `Inbox → Raw → Wiki → outputs`
+- The memory triad: `CLAUDE.md` = rules, `MEMORY.md` = current state, `Intelligence_snapshot.md` = deep picture
+- The layered per-folder `CLAUDE.md` pattern
+- The self-coaching templates and the advisor factory
+- The 30-day adoption plan
+
+**Adapting the skeleton by hand (~15 minutes, no generation needed):**
+
+1. Rewrite `Wiki/00_Company/` for your business — mission, business model, org.
+2. Replace the sample decisions in `Wiki/40_Decisions/` with two real ones from your own history, keeping the schema: options, owner, reversal conditions, review date.
+3. Put your real audiences (board, team, customers, regulators…) into `Wiki/30_People/Your Profile.md`.
+4. Rewrite the behavioral guardrails in the root `CLAUDE.md` to *your* failure modes — those are personal, not industry-bound.
+5. Run `/build-advisor` and let it propose advisors from your actual decision log.
+
+Rule of thumb: **content is industry-specific; structure is not.** If you find yourself wanting to change the folder structure or the memory triad for your industry, you're probably re-solving a problem the pipeline already solves.
+
+---
+
 ## How it's built (for the technically curious)
 
 The generator is intentionally **template-first and LLM-light**, because speed matters — a personalized vault must appear in under a minute.
