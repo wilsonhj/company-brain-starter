@@ -1,6 +1,6 @@
 ---
-description: Generate a personalized "company brain" starter vault (30+ interlinked notes) for an industry in under 60s
-argument-hint: "<industry>" <team_size> ["one-line focus"]
+description: Generate a personalized "company brain" starter vault (40+ interlinked notes) for an industry in under 60s
+argument-hint: "<industry>" <team_size> ["one-line focus"] [--out <folder>]
 allowed-tools: Bash(node:*), Bash(open:*)
 ---
 
@@ -12,6 +12,8 @@ industry-specific substitutions, then the script weaves 40+ densely-interlinked
 notes — a data-flow vault (Inbox → Raw → Wiki → outputs), a three-layer memory
 triad (CLAUDE.md / MEMORY.md / Intelligence_snapshot.md), a layered `CLAUDE.md`
 in every folder, and an industry-tailored advisor. Target: under 60 seconds.
+By default the vault lands in `~/Showcase/blueprints/`; pass `--out ./folder`
+when you want it written somewhere specific.
 
 Running the generator now:
 

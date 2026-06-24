@@ -11,6 +11,7 @@
 //
 // Usage:
 //   node scripts/generate.mjs "<industry>" <team_size> ["one-line focus"]
+//   node scripts/generate.mjs "<industry>" <team_size> --out ./my-company-brain
 //   node scripts/generate.mjs --skeleton            # build the generic repo skeleton
 //
 // Requires: the `claude` CLI on PATH (uses the user's existing auth) and `zip`.
@@ -19,7 +20,7 @@
 import { execFile } from "node:child_process";
 import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
-import { join } from "node:path";
+import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
 
 const execFileP = promisify(execFile);
@@ -30,7 +31,33 @@ const MODEL = "claude-opus-4-8";
 // ----------------------------------------------------------------------------
 // args
 // ----------------------------------------------------------------------------
-const argv = process.argv.slice(2);
+let argv = process.argv.slice(2);
+
+function takeOption(names) {
+  for (let i = 0; i < argv.length; i++) {
+    const arg = argv[i];
+    for (const name of names) {
+      if (arg === name) {
+        const value = argv[i + 1];
+        if (!value || value.startsWith("--")) {
+          console.error(`Missing value for ${name}`);
+          process.exit(1);
+        }
+        argv.splice(i, 2);
+        return value;
+      }
+      if (arg.startsWith(`${name}=`)) {
+        const value = arg.slice(name.length + 1);
+        argv.splice(i, 1);
+        return value;
+      }
+    }
+  }
+  return "";
+}
+
+const REQUESTED_OUT = takeOption(["--out", "--out-dir"]);
+const REQUESTED_ZIP_DIR = takeOption(["--zip-dir"]);
 const SKELETON = argv.includes("--skeleton");
 const NO_LLM = argv.includes("--no-llm") || SKELETON;
 const NO_ZIP = argv.includes("--no-zip") || SKELETON;
@@ -50,7 +77,7 @@ if (SKELETON) {
   focus = positional.slice(2).join(" ").trim();
   if (!industry || !teamSize) {
     console.error(
-      'Usage: node scripts/generate.mjs "<industry>" <team_size> ["one-line focus"]'
+      'Usage: node scripts/generate.mjs "<industry>" <team_size> ["one-line focus"] [--out <folder>] [--zip-dir <folder>]'
     );
     process.exit(1);
   }
@@ -73,8 +100,14 @@ function stamp() {
 const SHOWCASE = join(homedir(), "Showcase", "blueprints");
 const outDir = SKELETON
   ? join(process.cwd(), "skeleton")
-  : join(SHOWCASE, `${stamp()}_${slug}`);
-const zipDir = join(SHOWCASE, "out");
+  : REQUESTED_OUT
+    ? resolve(process.cwd(), REQUESTED_OUT)
+    : join(SHOWCASE, `${stamp()}_${slug}`);
+const zipDir = REQUESTED_ZIP_DIR
+  ? resolve(process.cwd(), REQUESTED_ZIP_DIR)
+  : REQUESTED_OUT
+    ? join(dirname(outDir), "out")
+    : join(SHOWCASE, "out");
 
 // ----------------------------------------------------------------------------
 // 1. data: one LLM call -> structured substitutions  (with safe fallback)
@@ -1238,7 +1271,9 @@ Consult the advisor named **$1** on the topic: **$2**.
 // 3. write + zip + report
 // ----------------------------------------------------------------------------
 function writeAll(map) {
-  if (existsSync(outDir) && SKELETON) rmSync(outDir, { recursive: true, force: true });
+  if (existsSync(outDir) && (SKELETON || REQUESTED_OUT)) {
+    rmSync(outDir, { recursive: true, force: true });
+  }
   for (const [rel, body] of Object.entries(map)) {
     const full = join(outDir, rel);
     mkdirSync(join(full, ".."), { recursive: true });

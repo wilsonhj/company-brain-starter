@@ -8,7 +8,12 @@ Open the [`skeleton/`](skeleton/) folder in [Obsidian](https://obsidian.md) and 
 
 ## Start in 3 minutes
 
-Prereqs: [Claude Code](https://claude.com/claude-code), Node.js, and
+You can use this repo in two modes:
+
+- **No setup beyond Obsidian:** open [`skeleton/`](skeleton/) as a vault and start editing the generic company brain.
+- **Personalized starter:** use Claude Code + Node.js to generate a fresh vault for your industry.
+
+Prereqs for the personalized path: [Claude Code](https://claude.com/claude-code), Node.js, and
 [Obsidian](https://obsidian.md) if you want the graph view.
 
 ```bash
@@ -34,6 +39,14 @@ Examples:
 
 The generated vault appears in `~/Showcase/blueprints/`. Open that folder in
 Obsidian to see the graph bloom, or use the `.zip` created there to share it.
+
+Prefer to generate into a local folder you choose?
+
+```bash
+node scripts/generate.mjs "consumer goods" 200 --out ./my-company-brain
+```
+
+That writes the vault to `./my-company-brain` and creates a shareable zip next to it in `./out/`.
 
 If you do not use Claude Code yet, open [`skeleton/`](skeleton/) in Obsidian and
 start from the generic version.
@@ -226,10 +239,10 @@ The generator is intentionally **template-first and LLM-light**, because speed m
 - **The templates do the writing.** A Node script weaves those substitutions into 40+ notes and cross-links them deterministically, so link density and structure are guaranteed regardless of what the model returns.
 - **It never hard-fails.** If the AI call is slow or returns malformed JSON, a built-in generic dataset takes over and the vault still generates instantly — important when you're generating live in front of someone on a phone hotspot. The call's timeout sits *below* the 60-second budget, so even a worst-case slow response falls back rather than blowing the deadline.
 - **A speed detail that matters.** The single extraction call runs with extended thinking disabled (`MAX_THINKING_TOKENS=0`). For structured substitution the model doesn't need to "think out loud," and turning it off roughly halves the wall-clock time — the difference between comfortably under a minute and not.
-- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~55 files + one API call + zip." Node has a fast cold start, is native to the Claude Code ecosystem, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
+- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~59 files + one API call + zip." Node has a fast cold start, is native to the Claude Code ecosystem, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
 - **Why Claude (not another provider)?** This is a Claude Code command, so it uses your existing Claude authentication — no extra API key to manage — and Opus 4.8 gives the strongest industry-specific substitutions.
 
-Typical generation: **40–45 seconds**, 55 files, ~300 wikilinks, zero unresolved links, zero placeholder text.
+Typical generation: **40–45 seconds**, 59 files, ~360 wikilinks, zero unresolved links, zero placeholder text.
 
 ---
 
