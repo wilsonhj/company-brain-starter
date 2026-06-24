@@ -6,6 +6,40 @@ Open the [`skeleton/`](skeleton/) folder in [Obsidian](https://obsidian.md) and 
 
 ---
 
+## Start in 3 minutes
+
+Prereqs: [Claude Code](https://claude.com/claude-code), Node.js, and
+[Obsidian](https://obsidian.md) if you want the graph view.
+
+```bash
+git clone https://github.com/spacegeologist/company-brain-starter.git
+cd company-brain-starter
+claude
+```
+
+Run `claude` from the cloned repo root so Claude Code can see
+`.claude/commands/brain-blueprint.md`. Then type:
+
+```text
+/brain-blueprint "your industry" <team_size> ["focus"]
+```
+
+Examples:
+
+```text
+/brain-blueprint "consumer goods" 200
+/brain-blueprint healthcare 50 "multi-site clinics"
+/brain-blueprint "financial services" 30 "PE fund"
+```
+
+The generated vault appears in `~/Showcase/blueprints/`. Open that folder in
+Obsidian to see the graph bloom, or use the `.zip` created there to share it.
+
+If you do not use Claude Code yet, open [`skeleton/`](skeleton/) in Obsidian and
+start from the generic version.
+
+---
+
 ## Why this exists
 
 In most companies under a few hundred people, the most valuable knowledge lives in three places: the founders' heads, a buried chat history, and a graveyard of documents nobody re-opens. When someone leaves, it walks out the door. When someone joins, they spend months reconstructing it. And when you ask "why did we decide that?", nobody remembers.
