@@ -313,6 +313,7 @@ function todayPlus(days) {
 function buildVault(d) {
   const C = d.company_name;
   const N = {
+    dashboard: "Dashboard",
     memory: "MEMORY",
     intel: "Intelligence_snapshot",
     start: "START_HERE",
@@ -357,12 +358,24 @@ ${d.mission}
 **Tagline:** ${d.tagline}
 **Industry:** ${industry}  ·  **Team size:** ${teamSize}${focus ? `  ·  **Focus:** ${focus}` : ""}
 
-## The three-layer memory (read these in order)
+## The operating layers (read these in order)
 1. **This file (\`CLAUDE.md\`)** — the *rules*: how you, an AI agent, should behave here.
-2. **${link(N.memory)}** — the *state*: a fast-changing snapshot of where things stand right now (this quarter, what's urgent, who's on what). Read it to know the present.
-3. **${link(N.intel)}** — the *panorama*: the deep, slowly-evolving, authoritative picture of the whole business. Read it to understand context in depth.
+2. **${link(N.dashboard)}** — the *current ops surface*: what the CEO must see this week across progress, decisions, risks, team load, and checklist.
+3. **${link(N.memory)}** — the *state*: a fast-changing snapshot of where things stand right now (this quarter, what's urgent, who's on what). Read it to know the present.
+4. **${link(N.intel)}** — the *panorama*: the deep, slowly-evolving, authoritative picture of the whole business. Read it to understand context in depth.
 
-Three files, three jobs: rules vs. live state vs. deep reference. Don't collapse them.
+Four root files, four jobs: rules vs. operating surface vs. live state vs. deep reference. Don't collapse them.
+
+## Dashboard rule
+Treat ${link(N.dashboard)} as the default daily entry point. It is not a graph showcase and not a list of interesting resurfaced notes.
+
+Only add or keep an item on ${link(N.dashboard)} if it can do at least one of these:
+- Change a decision
+- Unblock a person
+- Protect capital
+- Update the operating state
+
+If a resurfaced note is useful background but does not meet that bar, update the relevant Wiki note and link it from deeper views instead.
 
 ## How knowledge flows (the data pipeline)
 Things move left to right, and only the right-hand side is authoritative:
@@ -374,7 +387,7 @@ Things move left to right, and only the right-hand side is authoritative:
 - **Wiki/** — the distilled, human-readable truth. An agent and a human turn Raw into Wiki *through dialogue*, not by dumping. Humans read here.
 - **outputs/** — query results, reports, and summaries an agent generates land here. Disposable; regenerate any time.
 
-When you process the Inbox: keep lasting sources in Raw, distil meaning into the right \`Wiki/\` domain folder, and cite the Raw source you used.
+When you process the Inbox: keep lasting sources in Raw, distil meaning into the right \`Wiki/\` domain folder, and cite the Raw source you used. Then update ${link(N.dashboard)} only for items that affect decisions, people, capital, or operating state.
 
 ## Behavioral guardrails (watch the human for these)
 This brain has opinions. If you notice one of these patterns, say so and intervene:
@@ -385,6 +398,7 @@ This brain has opinions. If you notice one of these patterns, say so and interve
 
 ## Map
 - \`Inbox/\` — capture zone · ${link(N.cap1)}
+- \`Dashboard.md\` — CEO operating surface · ${link(N.dashboard)}
 - \`Raw/\` — immutable sources · ${link(N.raw1)}
 - \`Wiki/00_Company/\` — ${link(N.mission)}, ${link(N.structure)}, ${link(N.glossary)}
 - \`Wiki/10_Strategy/\` — ${link(N.strategy)}, ${link(N.kpi)}
@@ -421,7 +435,73 @@ ${d.memory.recent_decisions.map((x) => `- ${x}`).join("\n")}
 
 See the full, permanent record in ${link(N.declog)}.
 ` +
-      related([N.intel, N.declog, N.start, N.strategy])
+      related([N.dashboard, N.intel, N.declog, N.start, N.strategy])
+  );
+
+  // ---- Dashboard.md (CEO operating surface)
+  put(
+    "Dashboard.md",
+    fm({ type: "dashboard", cadence: "weekly", owner: "CEO" }) +
+      `# Dashboard — ${C}
+
+The current CEO operating surface: progress, judgment calls, drift, team load, and the next week's checklist. Update this before the weekly operating review; use ${link(N.memory)} for fast-changing state and ${link(N.intel)} for deep context.
+
+## Company Progress
+**Quarter focus:** ${d.memory.quarter_focus}
+
+**Active bets**
+${d.bets.map((b, i) => `- ${link(N.bet(i))} — ${b.thesis}`).join("\n")}
+
+**Scoreboard**
+| KPI | Target |
+|---|---|
+${d.kpis.map((k) => `| ${k.name} | ${k.target} |`).join("\n")}
+
+## CEO Must See
+${d.memory.urgent.map((x, i) => `- [ ] ${x} — owner: ${link(N.role(i % d.roles.length))}`).join("\n")}
+
+**Key external dependencies**
+${d.vendors.map((v) => `- **${v.name}** _(${v.category})_ — ${v.use}`).join("\n")}
+
+## Decisions That Need Judgment
+${d.decisions
+  .slice(0, 3)
+  .map((x, i) => `- ${link(N.dec(i))} — current choice: **${x.choice}**; reversal signal: ${x.reversal}`)
+  .join("\n")}
+
+Use ${link(N.advisor)} for reversible operating calls; route unfamiliar decision types through ${link(N.advRouter)}.
+
+## Risks And Drift
+${d.risks
+  .map((r, i) => `- ${link(N.risk(i))} — exposure: ${r.exposure}; mitigation: ${r.mitigation}`)
+  .join("\n")}
+
+Drift check: if a risk changes the thesis behind ${link(N.strategy)}, write the new call in ${link(N.declog)} instead of editing old decisions.
+
+## Team Load
+${d.memory.team_deployment.map((x, i) => `- ${link(N.role(i % d.roles.length))} — ${x}`).join("\n")}
+
+## This Week Operating Checklist
+- [ ] Review ${link(N.kpi)} against the quarter focus in ${link(N.memory)}.
+- [ ] Clear Inbox items that affect ${link(N.declog)} or ${link(N.strategy)}.
+- [ ] Check every high-pressure vendor or platform dependency in ${link(N.vendors)}.
+- [ ] Ask which decision is being delayed, then log it in ${link(N.declog)}.
+- [ ] Update this dashboard after the weekly review.
+
+## Evidence And Deeper Views
+- Live state: ${link(N.memory)}
+- Deep company context: ${link(N.intel)}
+- Strategy hub: ${link(N.strategy)}
+- KPI detail: ${link(N.kpi)}
+- Decision record: ${link(N.declog)}
+- People and ownership: ${link(N.structure)}
+- Operating vendors: ${link(N.vendors)}
+- Meeting evidence: ${link(N.meet(0))}, ${link(N.meet(1))}
+` +
+      related([
+        N.memory, N.intel, N.strategy, N.kpi, N.declog,
+        N.structure, N.vendors, N.advisor,
+      ])
   );
 
   // ---- Intelligence_snapshot.md (~80 line panorama starter)
@@ -458,7 +538,9 @@ The most valuable thing in a ${teamSize}-person company is context: why we made 
 ## How it's organised (90 seconds)
 Knowledge flows in one direction: **Inbox → Raw → Wiki → outputs.**
 You capture anything into \`Inbox/\`. Sources worth keeping move to \`Raw/\`. The distilled truth lives in \`Wiki/\` (organised by topic — company, strategy, operations, people, decisions, meetings). When you ask the brain a question, the answer lands in \`outputs/\`.
-Three files at the root hold the memory: \`CLAUDE.md\` (the rules), ${link(N.memory)} (today's state), and ${link(N.intel)} (the deep picture).
+Four files at the root hold the operating system: \`CLAUDE.md\` (the rules), ${link(N.dashboard)} (the daily surface), ${link(N.memory)} (today's state), and ${link(N.intel)} (the deep picture).
+
+Only put surfaced notes on ${link(N.dashboard)} when they can change a decision, unblock a person, protect capital, or update the operating state. Everything else belongs in the right Wiki note.
 
 ## The 30-day plan
 
@@ -469,12 +551,13 @@ After every meeting, drop the transcript or a few bullets into \`Inbox/\`. Don't
 Each time you make a real choice, add a note in ${link(N.declog)}: the options, what you picked, who owns it, what would reverse it, and when to review it. Five minutes each.
 
 **Week 3 — Wire up Claude Code.**
-Point Claude Code at this folder. It reads the root \`CLAUDE.md\` and every folder's \`CLAUDE.md\` automatically, so it already knows how your company works. Ask it to process your week's Inbox into the Wiki for you.
+Point Claude Code at this folder. It reads the root \`CLAUDE.md\` and every folder's \`CLAUDE.md\` automatically, so it already knows how your company works. Ask it to process your week's Inbox into the Wiki for you, then update ${link(N.dashboard)} only with items that change decisions, people, capital, or operating state.
 
 **Week 4 — Ask your company a question, and build an advisor.**
 Try: "Based on our decision log, why did we choose our lead vendor?" — the answer comes back with links to the exact notes. Then run \`/build-advisor\` to create an AI advisor tuned to the decisions *you* actually face. See ${link(N.advTemplate)}.
 
 ## Jump in
+- CEO operating surface → ${link(N.dashboard)}
 - Today's state → ${link(N.memory)}
 - The deep picture → ${link(N.intel)}
 - Why we exist → ${link(N.mission)}

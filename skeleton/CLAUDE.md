@@ -1,16 +1,28 @@
-# Your Company — Company Brain (root agent guide)
+# Your Company — CEO Operating System (root agent guide)
 
-We build a durable your company business by compounding good decisions, documenting how we operate, and giving every teammate (and every AI agent) the same context the founders have.
+We build a durable your company business by compounding good decisions, documenting how we operate, and giving every teammate (and every AI agent) the same context the founders have. This vault is a CEO operating system first: action, judgment, capital protection, and team clarity beat knowledge display.
 
-**Tagline:** A starter company brain
+**Tagline:** A starter CEO operating system
 **Industry:** your company  ·  **Team size:** your team
 
-## The three-layer memory (read these in order)
+## The operating layers (read these in order)
 1. **This file (`CLAUDE.md`)** — the *rules*: how you, an AI agent, should behave here.
-2. **[[MEMORY]]** — the *state*: a fast-changing snapshot of where things stand right now (this quarter, what's urgent, who's on what). Read it to know the present.
-3. **[[Intelligence_snapshot]]** — the *panorama*: the deep, slowly-evolving, authoritative picture of the whole business. Read it to understand context in depth.
+2. **[[Dashboard]]** — the *current ops surface*: what the CEO must see this week across progress, decisions, risks, team load, and checklist.
+3. **[[MEMORY]]** — the *state*: a fast-changing snapshot of where things stand right now (this quarter, what's urgent, who's on what). Read it to know the present.
+4. **[[Intelligence_snapshot]]** — the *panorama*: the deep, slowly-evolving, authoritative picture of the whole business. Read it to understand context in depth.
 
-Three files, three jobs: rules vs. live state vs. deep reference. Don't collapse them.
+Four root files, four jobs: rules vs. operating surface vs. live state vs. deep reference. Don't collapse them.
+
+## Dashboard rule
+Treat [[Dashboard]] as the default daily entry point. It is not a graph showcase and not a list of interesting resurfaced notes.
+
+Only add or keep an item on [[Dashboard]] if it can do at least one of these:
+- Change a decision
+- Unblock a person
+- Protect capital
+- Update the operating state
+
+If a resurfaced note is useful background but does not meet that bar, update the relevant Wiki note and link it from deeper views instead.
 
 ## How knowledge flows (the data pipeline)
 Things move left to right, and only the right-hand side is authoritative:
@@ -23,6 +35,7 @@ Things move left to right, and only the right-hand side is authoritative:
 - **outputs/** — query results, reports, and summaries an agent generates land here. Disposable; regenerate any time.
 
 When you process the Inbox: keep lasting sources in Raw, distil meaning into the right `Wiki/` domain folder, and cite the Raw source you used.
+Then update [[Dashboard]] only for items that affect decisions, people, capital, or operating state.
 
 ## Behavioral guardrails (watch the human for these)
 This brain has opinions. If you notice one of these patterns, say so and intervene:
@@ -32,6 +45,7 @@ This brain has opinions. If you notice one of these patterns, say so and interve
 - **Delaying reversible decisions** — treating a cheap, undoable choice as if it were permanent. *Intervention:* flag that it's reversible and push to decide now.
 
 ## Map
+- `Dashboard.md` — daily CEO operating surface · [[Dashboard]]
 - `Inbox/` — capture zone · [[Capture - Operational Leverage follow-up]]
 - `Raw/` — immutable sources · [[Transcript - Quarterly Strategy Offsite]]
 - `Wiki/00_Company/` — [[Mission and Vision]], [[Company Structure]], [[Glossary]]

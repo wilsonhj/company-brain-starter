@@ -1,6 +1,6 @@
 # Company Brain Starter
 
-**A company brain is your organization's shared memory — written so that both your team and an AI assistant can read it.** This repository is a ready-to-use starter: a folder structure, a set of example notes, and a 30-day plan to make it a habit.
+**A company brain is your organization's shared memory — written so that both your team and an AI assistant can read it.** This starter turns that memory into a CEO operating system: a daily Dashboard, decision logs, operating rules, evidence, and example notes that help you act instead of merely browse.
 
 Open the [`skeleton/`](skeleton/) folder in [Obsidian](https://obsidian.md) and you'll see it light up — every note links to others, so your company's knowledge becomes a living map instead of a pile of documents.
 
@@ -84,7 +84,17 @@ The root `CLAUDE.md` also carries **behavioral guardrails** — a short list of 
 
 ---
 
-## Idea 3 — Three layers of memory
+## Idea 3 — The Dashboard is the daily operating surface
+
+The vault is not meant to become a knowledge display wall. The CEO starts in **`Dashboard.md`**, which shows company progress, judgment calls, risks and drift, team load, this week's checklist, and links to the deeper evidence.
+
+The rule is strict: a surfaced note only goes on the Dashboard if it can **change a decision, unblock a person, protect capital, or update the operating state**. Otherwise it belongs in the relevant Wiki note, with evidence in Raw.
+
+That keeps the first screen useful: it tells the CEO what needs attention now, then points to `MEMORY.md`, `Intelligence_snapshot.md`, the Decision Log, metrics, meetings, and Raw sources for depth.
+
+---
+
+## Idea 4 — Three layers of memory
 
 "What's in a `CLAUDE.md`, and why does it matter?" The honest answer is that one file can't do everything, so this starter splits memory into **three files at the root**, each with one job:
 
@@ -96,7 +106,7 @@ Rules vs. live state vs. deep reference. Keeping them separate is what lets the 
 
 ---
 
-## Idea 4 — We don't give you advisors. We give you a way to build *your* advisors.
+## Idea 5 — We don't give you advisors. We give you a way to build *your* advisors.
 
 Generic AI assistants ship a fixed cast of famous names. That's a parlor trick. The real value is an AI advisor tuned to the decisions **you** actually face — so this starter ships an **advisor factory** instead of a fixed list.
 
@@ -115,6 +125,7 @@ This is the differentiated idea: *a way to build your own bench*, not a borrowed
 ```
 skeleton/                      A complete generic company brain — copy it and start today
   CLAUDE.md                    Root: mission, data flow, behavioral guardrails
+  Dashboard.md                 Daily CEO operating surface: progress, judgment, risk, load, checklist
   MEMORY.md                    Layer 2: this-quarter state snapshot (fill in the blanks)
   Intelligence_snapshot.md     Layer 3: deep-picture starter (~section prompts to expand)
   START_HERE.md                Your 30-day adoption plan (read this first)
@@ -190,7 +201,7 @@ If you saw this at a live demo, the showcase vault was a six-person **mining exp
 **Never changes, in any industry:**
 
 - The one-way flow: `Inbox → Raw → Wiki → outputs`
-- The memory triad: `CLAUDE.md` = rules, `MEMORY.md` = current state, `Intelligence_snapshot.md` = deep picture
+- The operating root: `CLAUDE.md` = rules, `Dashboard.md` = daily surface, `MEMORY.md` = current state, `Intelligence_snapshot.md` = deep picture
 - The layered per-folder `CLAUDE.md` pattern
 - The self-coaching templates and the advisor factory
 - The 30-day adoption plan

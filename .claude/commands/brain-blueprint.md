@@ -27,10 +27,13 @@ After it runs, tell the visitor:
 3. Point at the QR card: the **generic** starter (this same structure, un-personalized)
    lives in the public `company-brain-starter` repo. Offer to **AirDrop** the
    personalized `.zip` (path printed above) or **email** it after.
-4. The takeaway line: *"Every folder has its own `CLAUDE.md` telling the AI how to
-   behave there, knowledge flows Inbox → Raw → Wiki → outputs, and three files hold
-   the memory — rules, today's state, and the deep picture. That structure is what
-   turns a folder of notes into a company brain."* Point out the industry-tailored
+4. Start them on `Dashboard.md`: the CEO operating surface for progress, judgment
+   calls, risk drift, team load, and this week's checklist.
+5. The takeaway line: *"Every folder has its own `CLAUDE.md` telling the AI how to
+   behave there, knowledge flows Inbox → Raw → Wiki → outputs, and the root files
+   split the operating system into rules, Dashboard, today's state, and the deep
+   picture. The Dashboard only surfaces notes that change decisions, unblock people,
+   protect capital, or update operating state."* Point out the industry-tailored
    advisor and `/build-advisor` as the "build YOUR advisors" hook.
 
 Do **not** attempt live personalized URLs on venue wifi — AirDrop or email only.
