@@ -9,5 +9,6 @@
 Thumbs.db
 node_modules/
 
-# Local Claude Code settings (machine-specific)
+# Local agent-CLI settings (machine-specific)
 .claude/settings.local.json
+.codex/config.toml

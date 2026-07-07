@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 // brain-blueprint generator (architecture v2)
-// Template-first, LLM-light. Copies a skeleton instantly, makes ONE Claude
-// (Opus 4.8) call for industry-specific substitutions, then weaves a densely
+// Template-first, LLM-light. Copies a skeleton instantly, makes ONE agent-CLI
+// call for industry-specific substitutions, then weaves a densely
 // interlinked "company brain" vault.
 //
 // Structure follows Karpathy's data-flow LLM-Wiki pattern (Inbox -> Raw -> Wiki
 // -> outputs) with domain subfolders inside Wiki/, a three-layer memory triad
-// at the root (CLAUDE.md / MEMORY.md / Intelligence_snapshot.md), and an
+// at the root (AGENTS.md / MEMORY.md / Intelligence_snapshot.md), and an
 // "advisor factory" meta-pattern instead of a fixed advisor list.
 //
 // Usage:
@@ -14,7 +14,11 @@
 //   node scripts/generate.mjs "<industry>" <team_size> --out ./my-company-brain
 //   node scripts/generate.mjs --skeleton            # build the generic repo skeleton
 //
-// Requires: the `claude` CLI on PATH (uses the user's existing auth) and `zip`.
+// Agent CLI: works with whichever agent CLI you already use — Claude Code
+// (`claude`), OpenAI Codex (`codex`), or Gemini CLI (`gemini`). The first one
+// found on PATH is used (that order); override with --cli <name> or BRAIN_CLI,
+// and optionally pin a model with --model <id> or BRAIN_MODEL. Each CLI uses
+// your existing auth. `zip` is required for the shareable archive.
 // A deterministic fallback dataset means the call can NEVER hard-fail a demo.
 
 import { execFile } from "node:child_process";
@@ -25,8 +29,6 @@ import { promisify } from "node:util";
 
 const execFileP = promisify(execFile);
 const t0 = Date.now();
-
-const MODEL = "claude-opus-4-8";
 
 // ----------------------------------------------------------------------------
 // args
@@ -58,6 +60,8 @@ function takeOption(names) {
 
 const REQUESTED_OUT = takeOption(["--out", "--out-dir"]);
 const REQUESTED_ZIP_DIR = takeOption(["--zip-dir"]);
+const REQUESTED_CLI = takeOption(["--cli"]) || process.env.BRAIN_CLI || "";
+const REQUESTED_MODEL = takeOption(["--model"]) || process.env.BRAIN_MODEL || "";
 const SKELETON = argv.includes("--skeleton");
 const NO_LLM = argv.includes("--no-llm") || SKELETON;
 const NO_ZIP = argv.includes("--no-zip") || SKELETON;
@@ -221,7 +225,7 @@ function fallbackData() {
 function buildPrompt() {
   const focusLine = focus ? ` Focus: ${focus}.` : "";
   // LLM-light: ONLY short industry-specific substitutions. Templates write prose.
-  // Minified output + capped strings keep this fast even on Opus.
+  // Minified output + capped strings keep this fast on any model.
   return `Generate industry-specific substitutions for a fictional but realistic company.
 Industry: ${industry}. Team size: ${teamSize}.${focusLine}
 
@@ -278,31 +282,84 @@ function coerce(data) {
   return out;
 }
 
+// Supported agent CLIs. Each entry builds a one-shot, non-interactive
+// "prompt in, text out" invocation; the model flag is only added when the
+// user pins one, so each CLI's own default model is used otherwise.
+const AGENT_CLIS = {
+  claude: {
+    args: (prompt, model) =>
+      ["-p", prompt].concat(model ? ["--model", model] : []),
+    // Claude otherwise burns thousands of extended-thinking tokens on this
+    // simple extraction. Disabling it is what keeps the call fast.
+    env: { MAX_THINKING_TOKENS: "0" },
+  },
+  codex: {
+    args: (prompt, model) =>
+      ["exec", prompt].concat(model ? ["--model", model] : []),
+  },
+  gemini: {
+    args: (prompt, model) =>
+      ["-p", prompt].concat(model ? ["--model", model] : []),
+  },
+};
+
+async function onPath(cmd) {
+  try {
+    await execFileP(process.platform === "win32" ? "where" : "which", [cmd]);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+async function pickCli() {
+  if (REQUESTED_CLI) {
+    if (!AGENT_CLIS[REQUESTED_CLI]) {
+      console.error(
+        `Unknown --cli "${REQUESTED_CLI}". Supported: ${Object.keys(AGENT_CLIS).join(", ")}`
+      );
+      process.exit(1);
+    }
+    return REQUESTED_CLI;
+  }
+  for (const name of Object.keys(AGENT_CLIS)) {
+    if (await onPath(name)) return name;
+  }
+  return null;
+}
+
 async function getData() {
   if (NO_LLM) return { data: coerce(fallbackData()), source: "generic/skeleton" };
+  const cliName = await pickCli();
+  if (!cliName) {
+    console.error(
+      `[warn] No agent CLI found on PATH (looked for: ${Object.keys(AGENT_CLIS).join(", ")}); using fallback dataset.`
+    );
+    return { data: coerce(fallbackData()), source: "fallback" };
+  }
+  const cli = AGENT_CLIS[cliName];
   try {
     const { stdout } = await execFileP(
-      "claude",
-      ["-p", buildPrompt(), "--model", MODEL, "--output-format", "json"],
+      cliName,
+      cli.args(buildPrompt(), REQUESTED_MODEL),
       {
         maxBuffer: 1024 * 1024 * 16,
         // Timeout sits BELOW the 60s SLA: if the model is slow, we abandon it
         // and fall back to the instant generic dataset, so the whole run still
         // finishes under 60s rather than hanging in front of a visitor.
         timeout: 56000,
-        // Opus otherwise burns thousands of extended-thinking tokens on this
-        // simple extraction. Disabling it is what keeps the call ~40s, not ~90s.
-        env: { ...process.env, MAX_THINKING_TOKENS: "0" },
+        env: { ...process.env, ...(cli.env || {}) },
       }
     );
-    const outer = JSON.parse(stdout);
-    let txt = String(outer.result || "").trim();
+    // All three CLIs print the response as text (possibly wrapped in a fence
+    // or preceded by log lines); extract the outermost JSON object.
+    let txt = String(stdout).trim();
     txt = txt.replace(/^```[a-z]*\s*/i, "").replace(/```\s*$/i, "").trim();
     const a = txt.indexOf("{");
     const b = txt.lastIndexOf("}");
     if (a >= 0 && b > a) txt = txt.slice(a, b + 1);
     const data = JSON.parse(txt);
-    return { data: coerce(data), source: MODEL };
+    return { data: coerce(data), source: REQUESTED_MODEL ? `${cliName} (${REQUESTED_MODEL})` : cliName };
   } catch (e) {
     console.error(`[warn] LLM call failed (${e.message}); using fallback dataset.`);
     return { data: coerce(fallbackData()), source: "fallback" };
@@ -381,9 +438,9 @@ function buildVault(d) {
   // ROOT — the three-layer memory triad lives here
   // ======================================================================
 
-  // ---- root CLAUDE.md (agent instructions: data flow + guardrails)
+  // ---- root AGENTS.md (agent instructions: data flow + guardrails)
   put(
-    "CLAUDE.md",
+    "AGENTS.md",
     `# ${C} — Company Brain (root agent guide)
 
 ${d.mission}
@@ -392,7 +449,7 @@ ${d.mission}
 **Industry:** ${industry}  ·  **Team size:** ${teamSize}${focus ? `  ·  **Focus:** ${focus}` : ""}
 
 ## The operating layers (read these in order)
-1. **This file (\`CLAUDE.md\`)** — the *rules*: how you, an AI agent, should behave here.
+1. **This file (\`AGENTS.md\`)** — the *rules*: how you, an AI agent, should behave here.
 2. **${link(N.dashboard)}** — the *current ops surface*: what the CEO must see this week across progress, decisions, risks, team load, and checklist.
 3. **${link(N.memory)}** — the *state*: a fast-changing snapshot of where things stand right now (this quarter, what's urgent, who's on what). Read it to know the present.
 4. **${link(N.intel)}** — the *panorama*: the deep, slowly-evolving, authoritative picture of the whole business. Read it to understand context in depth.
@@ -449,7 +506,7 @@ This brain has opinions. If you notice one of these patterns, say so and interve
     fm({ type: "memory", updated: todayMinus(2) }) +
       `# MEMORY — ${C} (state snapshot)
 
-> The fast-changing working memory. An agent reads this **first** to know where things stand *right now*. Update it weekly. For the deep reference see ${link(N.intel)}; for the rules see the root \`CLAUDE.md\`.
+> The fast-changing working memory. An agent reads this **first** to know where things stand *right now*. Update it weekly. For the deep reference see ${link(N.intel)}; for the rules see the root \`AGENTS.md\`.
 > Everything below is an example — **edit it to match your reality.**
 
 **Last updated:** ${todayMinus(2)}  ·  **Maintained by:** ${link(N.role(0))}
@@ -550,9 +607,9 @@ ${d.memory.team_deployment.map((x, i) => `- ${link(N.role(i % d.roles.length))} 
       `# Intelligence Snapshot — ${C}
 
 > The authoritative, full-panorama view of the company. Unlike ${link(N.memory)} (a fast-changing state snapshot), this is the deep, slowly-evolving reference an agent reads to understand the *whole* business. Expand each section over time — the prompts are starting points, not the final text.
-> This is the long answer to "what's in a CLAUDE.md and why does it matter": the rules live in \`CLAUDE.md\`, the live state in ${link(N.memory)}, and the deep truth here.
+> This is the long answer to "what's in an AGENTS.md and why does it matter": the rules live in \`AGENTS.md\`, the live state in ${link(N.memory)}, and the deep truth here.
 
-**How to use:** spend 20 minutes filling two or three sections you know cold. Ask Claude Code to interview you for the rest, one section per sitting.
+**How to use:** spend 20 minutes filling two or three sections you know cold. Ask your AI agent to interview you for the rest, one section per sitting.
 
 ${intelBody}` +
       related([N.memory, N.mission, N.strategy, N.declog, N.kpi])
@@ -571,7 +628,7 @@ The most valuable thing in a ${teamSize}-person company is context: why we made 
 ## How it's organised (90 seconds)
 Knowledge flows in one direction: **Inbox → Raw → Wiki → outputs.**
 You capture anything into \`Inbox/\`. Sources worth keeping move to \`Raw/\`. The distilled truth lives in \`Wiki/\` (organised by topic — company, strategy, operations, people, decisions, meetings). When you ask the brain a question, the answer lands in \`outputs/\`.
-Four files at the root hold the operating system: \`CLAUDE.md\` (the rules), ${link(N.dashboard)} (the daily surface), ${link(N.memory)} (today's state), and ${link(N.intel)} (the deep picture).
+Four files at the root hold the operating system: \`AGENTS.md\` (the rules), ${link(N.dashboard)} (the daily surface), ${link(N.memory)} (today's state), and ${link(N.intel)} (the deep picture).
 
 Only put surfaced notes on ${link(N.dashboard)} when they can change a decision, unblock a person, protect capital, or update the operating state. Everything else belongs in the right Wiki note.
 
@@ -583,8 +640,8 @@ After every meeting, drop the transcript or a few bullets into \`Inbox/\`. Don't
 **Week 2 — Add the decision log.**
 Each time you make a real choice, add a note in ${link(N.declog)}: the options, what you picked, who owns it, what would reverse it, and when to review it. Five minutes each.
 
-**Week 3 — Wire up Claude Code.**
-Point Claude Code at this folder. It reads the root \`CLAUDE.md\` and every folder's \`CLAUDE.md\` automatically, so it already knows how your company works. Ask it to process your week's Inbox into the Wiki for you, then update ${link(N.dashboard)} only with items that change decisions, people, capital, or operating state.
+**Week 3 — Wire up an AI agent.**
+Open this folder in the agent CLI you already use — Claude Code, OpenAI Codex, or Gemini CLI all work out of the box. Each reads the root \`AGENTS.md\` and every folder's \`AGENTS.md\` automatically (Claude Code via the \`CLAUDE.md\` stubs, Gemini via \`.gemini/settings.json\` — both included), so it already knows how your company works. Ask it to process your week's Inbox into the Wiki for you, then update ${link(N.dashboard)} only with items that change decisions, people, capital, or operating state.
 
 **Week 4 — Ask your company a question, and build an advisor.**
 Try: "Based on our decision log, why did we choose our lead vendor?" — the answer comes back with links to the exact notes. Then run \`/build-advisor\` to create an AI advisor tuned to the decisions *you* actually face. See ${link(N.advTemplate)}.
@@ -605,7 +662,7 @@ Try: "Based on our decision log, why did we choose our lead vendor?" — the ans
   // Inbox/  Raw/  outputs/  — the data-flow folders
   // ======================================================================
   put(
-    "Inbox/CLAUDE.md",
+    "Inbox/AGENTS.md",
     `# Agent guide — Inbox/ (the front door)
 
 Everything enters here first. Capturing always beats organising.
@@ -640,7 +697,7 @@ Noticed movement in **${d.kpis[0].name}**. Link it to ${link(N.kpi)} and check w
   );
 
   put(
-    "Raw/CLAUDE.md",
+    "Raw/AGENTS.md",
     `# Agent guide — Raw/ (immutable sources)
 
 This folder holds the **evidence**: meeting transcripts, source documents, clippings — exactly as captured.
@@ -667,7 +724,7 @@ This transcript is the source behind the summary in ${link(N.meet(m === d.meetin
   put(`Raw/${N.raw2}.md`, rawTranscript(d.meetings[1], 14) + related([N.meet(1), N.declog]));
 
   put(
-    "outputs/CLAUDE.md",
+    "outputs/AGENTS.md",
     `# Agent guide — outputs/ (generated products)
 
 Query results, reports, and summaries an agent produces land here — for example the answer to "summarise every decision that touched pricing."
@@ -687,7 +744,7 @@ This folder starts empty — it fills up the first time you ask the brain a ques
 
   // ---- Wiki/00_Company
   put(
-    "Wiki/00_Company/CLAUDE.md",
+    "Wiki/00_Company/AGENTS.md",
     `# Agent guide — Wiki/00_Company
 
 The company's identity: mission, structure, and shared language.
@@ -747,7 +804,7 @@ ${d.glossary.map((g) => `- **${g.term}** — ${g.def}`).join("\n")}
 
   // ---- Wiki/10_Strategy
   put(
-    "Wiki/10_Strategy/CLAUDE.md",
+    "Wiki/10_Strategy/AGENTS.md",
     `# Agent guide — Wiki/10_Strategy
 
 Where we're going: the annual strategy, our active bets, and the risks against them.
@@ -835,7 +892,7 @@ Each metric maps to at least one bet. Start with ${link(N.bet(0))} and ${link(N.
 
   // ---- Wiki/20_Operations
   put(
-    "Wiki/20_Operations/CLAUDE.md",
+    "Wiki/20_Operations/AGENTS.md",
     `# Agent guide — Wiki/20_Operations
 
 How we actually run: playbooks, SOPs, and vendor notes.
@@ -878,7 +935,7 @@ ${d.vendors.map((v) => `- **${v.name}** _(${v.category})_ — ${v.use}`).join("\
 
   // ---- Wiki/30_People  (+ advisor factory)
   put(
-    "Wiki/30_People/CLAUDE.md",
+    "Wiki/30_People/AGENTS.md",
     `# Agent guide — Wiki/30_People
 
 Who does what: roles, onboarding, and the **advisor factory**.
@@ -1096,7 +1153,7 @@ _What will you stop, start, or shift over the next two weeks to close the gap?_
 
   // ---- Wiki/40_Decisions  (enhanced template)
   put(
-    "Wiki/40_Decisions/CLAUDE.md",
+    "Wiki/40_Decisions/AGENTS.md",
     `# Agent guide — Wiki/40_Decisions
 
 The most important folder in the company: the written memory of every consequential choice.
@@ -1169,7 +1226,7 @@ ${todayPlus(180 - (i + 1) * 9)} — revisit whether this still holds.
 
   // ---- Wiki/50_Meetings
   put(
-    "Wiki/50_Meetings/CLAUDE.md",
+    "Wiki/50_Meetings/AGENTS.md",
     `# Agent guide — Wiki/50_Meetings
 
 Meeting summaries, distilled from transcripts in \`Raw/\`.
@@ -1203,20 +1260,13 @@ Fed ${link(N.dec(decIdx))}. See the full ${link(N.declog)}.
   });
 
   // ======================================================================
-  // .claude/commands — visitor-facing advisor commands (also in skeleton/)
+  // Agent commands — the same two commands, mirrored into each CLI's
+  // native format so /advisor and /build-advisor work everywhere:
+  //   .claude/commands/*.md       Claude Code slash commands
+  //   .gemini/commands/*.toml     Gemini CLI custom commands
+  //   .codex/skills/*/SKILL.md    Codex skills
   // ======================================================================
-  put(
-    ".claude/commands/build-advisor.md",
-    `---
-description: Live-discover your recurring decision types and draft a custom AI advisor for each
-allowed-tools: Read, Glob, Grep, Write
-model: claude-haiku-4-5-20251001
-effort: low
----
-
-# /build-advisor — advisor factory (live discovery)
-
-Run this as a fast, scripted-feeling sequence — the whole loop should feel near-instant (well under 30 seconds after the visitor answers). You don't impose a fixed panel of gurus; you help the visitor build advisors tuned to the decisions *they* actually face. **Do not read any other files** — everything you need is in this command. Do the minimum: present, ask, write one file, print Done.
+  const buildAdvisorCore = `Run this as a fast, scripted-feeling sequence — the whole loop should feel near-instant (well under 30 seconds after the visitor answers). You don't impose a fixed panel of gurus; you help the visitor build advisors tuned to the decisions *they* actually face. **Do not read any other files** — everything you need is in this command. Do the minimum: present, ask, write one file, print Done.
 
 ## Step 1 — Scan (print this line verbatim, then continue immediately)
 > Scanning Raw/ and Wiki/40_Decisions/ for recurring decision types...
@@ -1233,7 +1283,7 @@ Ask in one line:
 > "Who in history — real or fictional — would be the best advisor here? Name one (or one per type)."
 
 ## Step 4 — Draft instantly (the critical path)
-For each advisor the visitor names, immediately **Write** \`Wiki/30_People/<advisor_slug>.md\` (slug = lowercase, hyphenated name) with these sections, filled from what you know about that figure — no file reads needed:
+For each advisor the visitor names, immediately write \`Wiki/30_People/<advisor_slug>.md\` (slug = lowercase, hyphenated name) with these sections, filled from what you know about that figure — no file reads needed:
 \`# Advisor: <Name>\` · **When to invoke** (tie to the matching decision type above) · **Core methodology** (1 short paragraph) · **Question framework** (3–4 questions) · **Output format** (a few bullets) · **Anti-patterns** (when they're wrong) · **Worked example** (apply them to one decision from \`Wiki/40_Decisions/\`). Keep it tight. Naming only one advisor is fine.
 
 ## Step 5 — Print Done (this is the finish line)
@@ -1241,8 +1291,26 @@ Print exactly:
 > Done — drafted Wiki/30_People/<advisor_slug>.md. Try \`/advisor <name> <topic>\` to invoke.
 
 ## Step 6 — Optional, only if asked
-Offer to add a row to ${link(N.advRouter)} mapping the decision type to the new advisor, and to promote a heavily-used advisor into a reusable skill (\`.claude/skills/<name>/SKILL.md\`). Don't block the finish line on this.
-`
+Offer to add a row to ${link(N.advRouter)} mapping the decision type to the new advisor, and to promote a heavily-used advisor into a reusable skill for your agent CLI (e.g. \`.claude/skills/<name>/SKILL.md\` or \`.codex/skills/<name>/SKILL.md\`). Don't block the finish line on this.
+`;
+  const advisorSteps = (nameRef) => `## Steps
+1. **Find** the advisor's note in \`Wiki/30_People/\`. Try, in order: \`Advisor - ${nameRef}.md\`, then \`${nameRef}.md\` (and a lowercase-hyphenated slug of ${nameRef}), then glob \`Wiki/30_People/*${nameRef}*.md\`. If none exists, list the advisors in \`Wiki/30_People/\` and ask the visitor to pick one (or to run \`/build-advisor\` to create it).
+2. **Ground** the analysis: read \`MEMORY.md\` for current state and skim \`Intelligence_snapshot.md\` and the relevant \`Wiki/40_Decisions/\` notes.
+3. **Run the advisor's own Question framework** from their note, then produce their analysis in their **Output format** — in character with their Core methodology, and honestly noting their Anti-patterns where they apply.
+4. **Close** with a suggested \`Wiki/40_Decisions/\` entry (options, owner, reversal conditions, six-month review date) if a decision is warranted.
+`;
+
+  // ---- Claude Code
+  put(
+    ".claude/commands/build-advisor.md",
+    `---
+description: Live-discover your recurring decision types and draft a custom AI advisor for each
+allowed-tools: Read, Glob, Grep, Write
+---
+
+# /build-advisor — advisor factory (live discovery)
+
+${buildAdvisorCore}`
   );
   put(
     ".claude/commands/advisor.md",
@@ -1256,13 +1324,76 @@ allowed-tools: Read, Glob, Grep
 
 Consult the advisor named **$1** on the topic: **$2**.
 
-## Steps
-1. **Find** the advisor's note in \`Wiki/30_People/\`. Try, in order: \`Advisor - $1.md\`, then \`$1.md\` (and a lowercase-hyphenated slug of $1), then glob \`Wiki/30_People/*$1*.md\`. If none exists, list the advisors in \`Wiki/30_People/\` and ask the visitor to pick one (or to run \`/build-advisor\` to create it).
-2. **Ground** the analysis: read \`MEMORY.md\` for current state and skim \`Intelligence_snapshot.md\` and the relevant \`Wiki/40_Decisions/\` notes.
-3. **Run the advisor's own Question framework** from their note, then produce their analysis in their **Output format** — in character with their Core methodology, and honestly noting their Anti-patterns where they apply.
-4. **Close** with a suggested \`Wiki/40_Decisions/\` entry (options, owner, reversal conditions, six-month review date) if a decision is warranted.
-`
+${advisorSteps("$1")}`
   );
+
+  // ---- Gemini CLI
+  const toml = (description, prompt) =>
+    `description = ${JSON.stringify(description)}\n\nprompt = """\n${prompt}"""\n`;
+  put(
+    ".gemini/commands/build-advisor.toml",
+    toml(
+      "Live-discover your recurring decision types and draft a custom AI advisor for each",
+      `# /build-advisor — advisor factory (live discovery)\n\n${buildAdvisorCore}`
+    )
+  );
+  put(
+    ".gemini/commands/advisor.toml",
+    toml(
+      "Invoke one of your advisors on a topic — /advisor <name> <topic>",
+      `# /advisor — consult an advisor
+
+The user's request: {{args}} — the first word is the advisor's name, the rest is the topic.
+
+${advisorSteps("<name>")}`
+    )
+  );
+
+  // ---- Codex
+  put(
+    ".codex/skills/build-advisor/SKILL.md",
+    `---
+name: build-advisor
+description: Live-discover the vault's recurring decision types and draft a custom AI advisor for each
+---
+
+# build-advisor — advisor factory (live discovery)
+
+${buildAdvisorCore}`
+  );
+  put(
+    ".codex/skills/advisor/SKILL.md",
+    `---
+name: advisor
+description: Invoke one of the vault's advisors on a topic — advisor <name> <topic>
+---
+
+# advisor — consult an advisor
+
+Consult the advisor the user names, on the topic they give.
+
+${advisorSteps("<name>")}`
+  );
+
+  // ---- Gemini CLI project settings: read AGENTS.md as the context file
+  put(
+    ".gemini/settings.json",
+    JSON.stringify({ context: { fileName: ["AGENTS.md"] } }, null, 2)
+  );
+
+  // ======================================================================
+  // Compatibility stubs — Codex reads AGENTS.md natively and Gemini CLI is
+  // pointed at it via .gemini/settings.json, but Claude Code reads
+  // CLAUDE.md; every AGENTS.md gets a one-line stub that imports it.
+  // ======================================================================
+  for (const p of Object.keys(files)) {
+    if (p === "AGENTS.md" || p.endsWith("/AGENTS.md")) {
+      put(
+        p.slice(0, -"AGENTS.md".length) + "CLAUDE.md",
+        "The agent instructions for this directory live in @AGENTS.md — follow that file.\n"
+      );
+    }
+  }
 
   return files;
 }
@@ -1284,7 +1415,12 @@ function writeAll(map) {
 function countLinks(map) {
   let total = 0, minLinks = Infinity, hubs = 0;
   const sampleNotes = Object.entries(map).filter(
-    ([p]) => !p.endsWith("CLAUDE.md") && !p.startsWith(".claude/")
+    ([p]) =>
+      !p.endsWith("AGENTS.md") &&
+      !p.endsWith("CLAUDE.md") &&
+      !p.startsWith(".claude/") &&
+      !p.startsWith(".gemini/") &&
+      !p.startsWith(".codex/")
   );
   for (const [, body] of sampleNotes) {
     const n = (body.match(/\[\[/g) || []).length;
@@ -1327,7 +1463,7 @@ if (SKELETON) {
 } else {
   console.log(`\n🧠  Company brain blueprint generated for: ${industry} (${teamSize})${focus ? ` — ${focus}` : ""}`);
   console.log(`    Company: ${data.company_name}   ·   Advisor: ${data.advisor.name}`);
-  console.log(`    Model: ${source}   ·   Wall time: ${secs}s`);
+  console.log(`    Source: ${source}   ·   Wall time: ${secs}s`);
   console.log(`\n📁  Vault: ${outDir}`);
   console.log(`    ${stats.files} files · ${stats.sampleNotes} sample notes · ${stats.links} wikilinks · ${stats.hubs} hub notes (6+ links) · min links/note ${stats.minLinksInSample}`);
   if (zipPath) console.log(`📦  Zip:   ${zipPath}`);
