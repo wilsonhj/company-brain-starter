@@ -1,13 +1,13 @@
 ---
 type: memory
-updated: 2026-06-08
+updated: 2026-08-26
 ---
 # MEMORY — Your Company (state snapshot)
 
 > The fast-changing working memory. An agent reads this **first** to know where things stand *right now*. Update it weekly. For the deep reference see [[Intelligence_snapshot]]; for the rules see the root `CLAUDE.md`.
 > Everything below is an example — **edit it to match your reality.**
 
-**Last updated:** 2026-06-08  ·  **Maintained by:** [[Role - Founder CEO]]
+**Last updated:** 2026-08-26  ·  **Maintained by:** [[Role - Founder CEO]]
 
 ## This quarter's focus
 Stabilise core operations and prove unit economics before any expansion.  _(edit me)_
@@ -30,6 +30,7 @@ Stabilise core operations and prove unit economics before any expansion.  _(edit
 See the full, permanent record in [[Decision Log]].
 
 ## Related
+- [[Dashboard]]
 - [[Intelligence_snapshot]]
 - [[Decision Log]]
 - [[START_HERE]]

@@ -17,7 +17,7 @@ Prereqs for the personalized path: [Claude Code](https://claude.com/claude-code)
 [Obsidian](https://obsidian.md) if you want the graph view.
 
 ```bash
-git clone https://github.com/spacegeologist/company-brain-starter.git
+git clone https://github.com/wilsonhj/company-brain-starter.git
 cd company-brain-starter
 claude
 ```
@@ -47,6 +47,10 @@ node scripts/generate.mjs "consumer goods" 200 --out ./my-company-brain
 ```
 
 That writes the vault to `./my-company-brain` and creates a shareable zip next to it in `./out/`.
+
+**`--out` replaces the folder you point it at.** If it already exists and has
+anything in it, the generator stops and tells you rather than overwriting your
+notes. Pass `--force` when you genuinely want to replace it.
 
 If you do not use Claude Code yet, open [`skeleton/`](skeleton/) in Obsidian and
 start from the generic version.

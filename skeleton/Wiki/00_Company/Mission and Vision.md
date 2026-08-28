@@ -6,7 +6,7 @@ status: living
 
 We build a durable your company business by compounding good decisions, documenting how we operate, and giving every teammate (and every AI agent) the same context the founders have.
 
-**Tagline:** *A starter company brain*
+**Tagline:** *A starter CEO operating system*
 
 ## What we believe
 - Context compounds. The more clearly we write down how we operate, the faster everyone — including our AI agents — gets.

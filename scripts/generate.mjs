@@ -18,7 +18,7 @@
 // A deterministic fallback dataset means the call can NEVER hard-fail a demo.
 
 import { execFile } from "node:child_process";
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { mkdirSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -59,6 +59,7 @@ function takeOption(names) {
 const REQUESTED_OUT = takeOption(["--out", "--out-dir"]);
 const REQUESTED_ZIP_DIR = takeOption(["--zip-dir"]);
 const SKELETON = argv.includes("--skeleton");
+const FORCE = argv.includes("--force");
 const NO_LLM = argv.includes("--no-llm") || SKELETON;
 const NO_ZIP = argv.includes("--no-zip") || SKELETON;
 // Auto-launch Obsidian on the finished vault (the "bloom" trophy moment).
@@ -77,7 +78,7 @@ if (SKELETON) {
   focus = positional.slice(2).join(" ").trim();
   if (!industry || !teamSize) {
     console.error(
-      'Usage: node scripts/generate.mjs "<industry>" <team_size> ["one-line focus"] [--out <folder>] [--zip-dir <folder>]'
+      'Usage: node scripts/generate.mjs "<industry>" <team_size> ["one-line focus"] [--out <folder>] [--zip-dir <folder>] [--force]'
     );
     process.exit(1);
   }
@@ -109,6 +110,20 @@ const zipDir = REQUESTED_ZIP_DIR
     ? join(dirname(outDir), "out")
     : join(SHOWCASE, "out");
 
+// Writing a vault REPLACES its output folder. That is intended for --skeleton
+// (the repo rebuilds its own skeleton/), but --out can point anywhere, including
+// a vault someone has already filled in — so refuse a non-empty folder unless
+// they explicitly pass --force. Checked here, before the LLM call, so a refusal
+// costs no time and no tokens.
+if (REQUESTED_OUT && !FORCE && existsSync(outDir) && readdirSync(outDir).length) {
+  console.error(
+    `Refusing to overwrite ${outDir}\n` +
+      `  It already exists and is not empty, and generating REPLACES the whole folder.\n` +
+      `  Pass --force to replace it, or --out <a new folder> to keep it.`
+  );
+  process.exit(1);
+}
+
 // ----------------------------------------------------------------------------
 // 1. data: one LLM call -> structured substitutions  (with safe fallback)
 // ----------------------------------------------------------------------------
@@ -116,7 +131,7 @@ function fallbackData() {
   const ind = String(industry).replace(/\b\w/g, (c) => c.toUpperCase());
   return {
     company_name: SKELETON ? "Your Company" : `${ind} Holdings`,
-    tagline: SKELETON ? "A starter company brain" : `Operating company in ${industry}`,
+    tagline: SKELETON ? "A starter CEO operating system" : `Operating company in ${industry}`,
     mission: `We build a durable ${industry} business by compounding good decisions, documenting how we operate, and giving every teammate (and every AI agent) the same context the founders have.`,
     glossary: [
       { term: "Company Brain", def: "The single source of truth for how we think, decide, and operate." },
@@ -384,9 +399,9 @@ function buildVault(d) {
   // ---- root CLAUDE.md (agent instructions: data flow + guardrails)
   put(
     "CLAUDE.md",
-    `# ${C} — Company Brain (root agent guide)
+    `# ${C} — CEO Operating System (root agent guide)
 
-${d.mission}
+${d.mission} This vault is a CEO operating system first: action, judgment, capital protection, and team clarity beat knowledge display.
 
 **Tagline:** ${d.tagline}
 **Industry:** ${industry}  ·  **Team size:** ${teamSize}${focus ? `  ·  **Focus:** ${focus}` : ""}
@@ -430,8 +445,8 @@ This brain has opinions. If you notice one of these patterns, say so and interve
 - **Delaying reversible decisions** — treating a cheap, undoable choice as if it were permanent. *Intervention:* flag that it's reversible and push to decide now.
 
 ## Map
+- \`Dashboard.md\` — daily CEO operating surface · ${link(N.dashboard)}
 - \`Inbox/\` — capture zone · ${link(N.cap1)}
-- \`Dashboard.md\` — CEO operating surface · ${link(N.dashboard)}
 - \`Raw/\` — immutable sources · ${link(N.raw1)}
 - \`Wiki/00_Company/\` — ${link(N.mission)}, ${link(N.structure)}, ${link(N.glossary)}
 - \`Wiki/10_Strategy/\` — ${link(N.strategy)}, ${link(N.kpi)}
@@ -474,10 +489,10 @@ See the full, permanent record in ${link(N.declog)}.
   // ---- Dashboard.md (CEO operating surface)
   put(
     "Dashboard.md",
-    fm({ type: "dashboard", cadence: "weekly", owner: "CEO" }) +
+    fm({ type: "dashboard", cadence: "daily", owner: d.roles[0].title }) +
       `# Dashboard — ${C}
 
-The current CEO operating surface: progress, judgment calls, drift, team load, and the next week's checklist. Update this before the weekly operating review; use ${link(N.memory)} for fast-changing state and ${link(N.intel)} for deep context.
+The daily CEO operating surface: progress, judgment calls, drift, team load, and the next week's checklist. This page is not a knowledge wall; it only surfaces what changes a decision, unblocks a person, protects capital, or updates the operating state. Update it before the weekly operating review; use ${link(N.memory)} for fast-changing state and ${link(N.intel)} for deep context.
 
 ## Company Progress
 **Quarter focus:** ${d.memory.quarter_focus}
@@ -512,7 +527,12 @@ ${d.risks
 Drift check: if a risk changes the thesis behind ${link(N.strategy)}, write the new call in ${link(N.declog)} instead of editing old decisions.
 
 ## Team Load
-${d.memory.team_deployment.map((x, i) => `- ${link(N.role(i % d.roles.length))} — ${x}`).join("\n")}
+${d.roles.map((r, i) => `- ${link(N.role(i))} — ${r.mandate}`).join("\n")}
+
+**Deployed this quarter**
+${d.memory.team_deployment.map((x) => `- ${x}`).join("\n")}
+
+Use ${link(N.oneonone)} when a load issue needs a conversation, not just a task.
 
 ## This Week Operating Checklist
 - [ ] Review ${link(N.kpi)} against the quarter focus in ${link(N.memory)}.
@@ -569,7 +589,9 @@ Welcome to the ${C} company brain. This is a 30-day plan to make it a habit. No 
 The most valuable thing in a ${teamSize}-person company is context: why we made each call, how each job is done, what we're betting on. Today that lives in people's heads and in chat. This vault moves it somewhere durable that both your team and an AI assistant can read.
 
 ## How it's organised (90 seconds)
-Knowledge flows in one direction: **Inbox → Raw → Wiki → outputs.**
+Start your day in ${link(N.dashboard)}. It is the current operating surface for the CEO: progress, judgment calls, risk drift, team load, and the weekly checklist.
+
+Knowledge still flows in one direction: **Inbox → Raw → Wiki → outputs.**
 You capture anything into \`Inbox/\`. Sources worth keeping move to \`Raw/\`. The distilled truth lives in \`Wiki/\` (organised by topic — company, strategy, operations, people, decisions, meetings). When you ask the brain a question, the answer lands in \`outputs/\`.
 Four files at the root hold the operating system: \`CLAUDE.md\` (the rules), ${link(N.dashboard)} (the daily surface), ${link(N.memory)} (today's state), and ${link(N.intel)} (the deep picture).
 
@@ -590,7 +612,7 @@ Point Claude Code at this folder. It reads the root \`CLAUDE.md\` and every fold
 Try: "Based on our decision log, why did we choose our lead vendor?" — the answer comes back with links to the exact notes. Then run \`/build-advisor\` to create an AI advisor tuned to the decisions *you* actually face. See ${link(N.advTemplate)}.
 
 ## Jump in
-- CEO operating surface → ${link(N.dashboard)}
+- Today's operating surface → ${link(N.dashboard)}
 - Today's state → ${link(N.memory)}
 - The deep picture → ${link(N.intel)}
 - Why we exist → ${link(N.mission)}

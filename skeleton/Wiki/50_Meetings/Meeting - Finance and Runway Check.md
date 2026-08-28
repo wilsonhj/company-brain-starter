@@ -1,11 +1,11 @@
 ---
 type: meeting
-date: 2026-05-20
+date: 2026-08-07
 category: Finance
 ---
 # Finance and Runway Check
 
-**Date.** 2026-05-20  ·  **Type.** Finance
+**Date.** 2026-08-07  ·  **Type.** Finance
 **Attendees.** Founder / CEO, Finance Lead
 
 ## Summary
