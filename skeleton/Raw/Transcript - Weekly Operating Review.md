@@ -1,11 +1,11 @@
 ---
 type: transcript
 source: meeting
-date: 2026-05-27
+date: 2026-08-14
 ---
 # Transcript: Weekly Operating Review
 
-_Raw, immutable. Filed 2026-05-27. Type: Operations. Attendees: Head of Operations, Commercial Lead._
+_Raw, immutable. Filed 2026-08-14. Type: Operations. Attendees: Head of Operations, Commercial Lead._
 
 > [00:00] **Head of Operations:** Let's start. Walked the dashboard; agreed to consolidate onto one operating platform.
 > [04:12] **Commercial Lead:** Agreed — let's make that a decision and write down what would make us reverse it.

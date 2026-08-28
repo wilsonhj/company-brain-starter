@@ -1,11 +1,11 @@
 ---
 type: meeting
-date: 2026-06-03
+date: 2026-08-21
 category: Strategy
 ---
 # Quarterly Strategy Offsite
 
-**Date.** 2026-06-03  ·  **Type.** Strategy
+**Date.** 2026-08-21  ·  **Type.** Strategy
 **Attendees.** Founder / CEO, Head of Operations, Finance Lead
 **Source transcript.** [[Transcript - Quarterly Strategy Offsite]] (immutable, in Raw/)
 
