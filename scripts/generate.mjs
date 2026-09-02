@@ -1369,6 +1369,13 @@ without committing.
 `
   );
 
+  // ---- .github/workflows/steward.yml — schedules /steward on GitHub.
+  // Inert inside this starter repo (GitHub only reads .github/workflows at
+  // the repository root); live once the vault is its own repo. Emitted as a
+  // JSON string literal, not a template literal, because the workflow is full
+  // of ${{ }} expressions that a template literal would try to interpolate.
+  put(".github/workflows/steward.yml", "# Nightly brain steward.\n#\n# Runs the /steward upkeep pass over this vault and pushes the result.\n#\n# Inert until you add a credential: set either ANTHROPIC_API_KEY or\n# CLAUDE_CODE_OAUTH_TOKEN as a repository secret (Settings -> Secrets and\n# variables -> Actions). Without one the job finishes green and does nothing,\n# rather than failing every night.\n#\n# Worth knowing before you trust the schedule:\n#   - GitHub runs scheduled workflows only from the default branch, and on\n#     public repositories it disables the schedule after 60 days with no\n#     repository activity.\n#   - A scheduled run is attributed to whoever last edited the cron line. If\n#     that account is a bot, add it to the action's allowed_bots input.\n#   - Run it by hand from the Actions tab a few times first. The early runs are\n#     where you find out whether its triage judgment matches yours.\nname: Brain steward\n\non:\n  schedule:\n    - cron: \"0 3 * * *\"\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  id-token: write\n\nconcurrency:\n  group: brain-steward\n  cancel-in-progress: false\n\njobs:\n  steward:\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n    steps:\n      - name: Check for a Claude credential\n        id: creds\n        env:\n          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}\n          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}\n        run: |\n          if [ -n \"$API_KEY\" ] || [ -n \"$OAUTH_TOKEN\" ]; then\n            echo \"configured=true\" >> \"$GITHUB_OUTPUT\"\n          else\n            echo \"configured=false\" >> \"$GITHUB_OUTPUT\"\n            echo \"No ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret is set, so the steward did not run.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n\n      - name: Check out the vault\n        if: steps.creds.outputs.configured == 'true'\n        uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n\n      - name: Give the steward a git identity\n        if: steps.creds.outputs.configured == 'true'\n        run: |\n          git config user.name \"brain-steward[bot]\"\n          git config user.email \"brain-steward@users.noreply.github.com\"\n\n      - name: Run the steward\n        if: steps.creds.outputs.configured == 'true'\n        uses: anthropics/claude-code-action@v1\n        with:\n          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}\n          # Authenticating with a Claude subscription instead? Delete the line\n          # above and uncomment this one:\n          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}\n          prompt: |\n            Read .claude/commands/steward.md and carry out its instructions\n            exactly, on this repository. Honour every limit it sets, including\n            all of the ones listed under \"Never\".\n            Do not push. A later workflow step does that.\n          # A plain-text prompt does not inherit the command file's\n          # allowed-tools frontmatter, so the same tools are granted here.\n          claude_args: |\n            --allowedTools \"Read,Glob,Grep,Write,Edit,Bash(git:*),Bash(mv:*)\"\n            --max-turns 40\n\n      - name: Push what the steward committed\n        if: steps.creds.outputs.configured == 'true'\n        run: |\n          if [ -n \"$(git log \"origin/${GITHUB_REF_NAME}..HEAD\" --oneline)\" ]; then\n            git push origin \"HEAD:${GITHUB_REF_NAME}\"\n            echo \"Pushed the steward's commit.\" >> \"$GITHUB_STEP_SUMMARY\"\n          else\n            echo \"Nothing to push - the steward made no commit.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n");
+
   return files;
 }
 
@@ -1389,7 +1396,10 @@ function writeAll(map) {
 function countLinks(map) {
   let total = 0, minLinks = Infinity, hubs = 0;
   const sampleNotes = Object.entries(map).filter(
-    ([p]) => !p.endsWith("CLAUDE.md") && !p.startsWith(".claude/")
+    ([p]) =>
+      !p.endsWith("CLAUDE.md") &&
+      !p.startsWith(".claude/") &&
+      !p.startsWith(".github/")
   );
   for (const [, body] of sampleNotes) {
     const n = (body.match(/\[\[/g) || []).length;

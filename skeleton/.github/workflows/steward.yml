@@ -1,0 +1,90 @@
+# Nightly brain steward.
+#
+# Runs the /steward upkeep pass over this vault and pushes the result.
+#
+# Inert until you add a credential: set either ANTHROPIC_API_KEY or
+# CLAUDE_CODE_OAUTH_TOKEN as a repository secret (Settings -> Secrets and
+# variables -> Actions). Without one the job finishes green and does nothing,
+# rather than failing every night.
+#
+# Worth knowing before you trust the schedule:
+#   - GitHub runs scheduled workflows only from the default branch, and on
+#     public repositories it disables the schedule after 60 days with no
+#     repository activity.
+#   - A scheduled run is attributed to whoever last edited the cron line. If
+#     that account is a bot, add it to the action's allowed_bots input.
+#   - Run it by hand from the Actions tab a few times first. The early runs are
+#     where you find out whether its triage judgment matches yours.
+name: Brain steward
+
+on:
+  schedule:
+    - cron: "0 3 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+  id-token: write
+
+concurrency:
+  group: brain-steward
+  cancel-in-progress: false
+
+jobs:
+  steward:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check for a Claude credential
+        id: creds
+        env:
+          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+        run: |
+          if [ -n "$API_KEY" ] || [ -n "$OAUTH_TOKEN" ]; then
+            echo "configured=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "configured=false" >> "$GITHUB_OUTPUT"
+            echo "No ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret is set, so the steward did not run." >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Check out the vault
+        if: steps.creds.outputs.configured == 'true'
+        uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+
+      - name: Give the steward a git identity
+        if: steps.creds.outputs.configured == 'true'
+        run: |
+          git config user.name "brain-steward[bot]"
+          git config user.email "brain-steward@users.noreply.github.com"
+
+      - name: Run the steward
+        if: steps.creds.outputs.configured == 'true'
+        uses: anthropics/claude-code-action@v1
+        with:
+          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
+          # Authenticating with a Claude subscription instead? Delete the line
+          # above and uncomment this one:
+          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            Read .claude/commands/steward.md and carry out its instructions
+            exactly, on this repository. Honour every limit it sets, including
+            all of the ones listed under "Never".
+            Do not push. A later workflow step does that.
+          # A plain-text prompt does not inherit the command file's
+          # allowed-tools frontmatter, so the same tools are granted here.
+          claude_args: |
+            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git:*),Bash(mv:*)"
+            --max-turns 40
+
+      - name: Push what the steward committed
+        if: steps.creds.outputs.configured == 'true'
+        run: |
+          if [ -n "$(git log "origin/${GITHUB_REF_NAME}..HEAD" --oneline)" ]; then
+            git push origin "HEAD:${GITHUB_REF_NAME}"
+            echo "Pushed the steward's commit." >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "Nothing to push - the steward made no commit." >> "$GITHUB_STEP_SUMMARY"
+          fi
