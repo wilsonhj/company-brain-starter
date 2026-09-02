@@ -82,6 +82,10 @@ Because the flow is explicit, everyone (and every AI agent) knows where to look:
 
 Inside `Wiki/`, notes are organized by topic — company, strategy, operations, people, decisions, meetings — so the truth is easy to navigate.
 
+**`/steward` is what keeps the pipeline moving.** A brain that only advances when someone remembers to advance it will stall, so each vault ships a command that does the upkeep pass: triage `Inbox/` into `Raw/` and the `Wiki/`, refresh `MEMORY.md`, apply the Dashboard's admission bar, and commit the result. Run it on a schedule or by hand. It is written to be self-contained, because a scheduled run starts fresh with no memory of the last one.
+
+It has firm limits. It never edits `Raw/`, never edits any `CLAUDE.md`, and never writes to `Wiki/40_Decisions/` — it *proposes* decision notes in its run log and leaves the call to you. It commits but does not push. Superseding a decision stays a human act; the steward is there to file evidence, not to exercise judgment.
+
 ---
 
 ## Idea 2 — The layered `CLAUDE.md` (the part worth slowing down for)
@@ -153,7 +157,7 @@ skeleton/                      A complete generic company brain — copy it and 
     30_People/   40_Decisions/ 50_Meetings/                          each + CLAUDE.md
     30_People/_advisor_template.md, _advisor_router.md, Advisor - …  the advisor factory
   outputs/                     Generated answers land here (starts empty) + CLAUDE.md
-  .claude/commands/            /build-advisor and /advisor for your own agent
+  .claude/commands/            /steward, /build-advisor and /advisor for your own agent
 
 scripts/                       The generator that builds personalized vaults
 .claude/commands/              The /brain-blueprint command (for whoever runs the showcase)
@@ -243,10 +247,10 @@ The generator is intentionally **template-first and LLM-light**, because speed m
 - **The templates do the writing.** A Node script weaves those substitutions into 40+ notes and cross-links them deterministically, so link density and structure are guaranteed regardless of what the model returns.
 - **It never hard-fails.** If the AI call is slow or returns malformed JSON, a built-in generic dataset takes over and the vault still generates instantly — important when you're generating live in front of someone on a phone hotspot. The call's timeout sits *below* the 60-second budget, so even a worst-case slow response falls back rather than blowing the deadline.
 - **A speed detail that matters.** The single extraction call runs with extended thinking disabled (`MAX_THINKING_TOKENS=0`). For structured substitution the model doesn't need to "think out loud," and turning it off roughly halves the wall-clock time — the difference between comfortably under a minute and not.
-- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~59 files + one API call + zip." Node has a fast cold start, is native to the Claude Code ecosystem, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
+- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~60 files + one API call + zip." Node has a fast cold start, is native to the Claude Code ecosystem, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
 - **Why Claude (not another provider)?** This is a Claude Code command, so it uses your existing Claude authentication — no extra API key to manage — and Opus 4.8 gives the strongest industry-specific substitutions.
 
-Typical generation: **40–45 seconds**, 59 files, ~360 wikilinks, zero unresolved links, zero placeholder text.
+Typical generation: **40–45 seconds**, 60 files, ~360 wikilinks, zero unresolved links, zero placeholder text.
 
 ---
 

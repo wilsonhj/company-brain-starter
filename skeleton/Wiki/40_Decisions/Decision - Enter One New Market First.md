@@ -1,6 +1,6 @@
 ---
 type: decision
-date: 2026-07-23
+date: 2026-07-28
 owner: Finance Lead
 ---
 # Decision: Enter One New Market First
@@ -20,7 +20,7 @@ Two expansion options on the table.
 [[Role - Finance Lead]]
 
 ## Decision date
-2026-07-23
+2026-07-28
 
 ## Reversal conditions
 Pause if core-market growth dips below target.
@@ -29,7 +29,7 @@ Pause if core-market growth dips below target.
 - [[Meeting - Market Expansion Working Session]]
 
 ## Six-month review date
-2027-01-19 — revisit whether this still holds.
+2027-01-24 — revisit whether this still holds.
 
 ## Related
 - [[Decision Log]]

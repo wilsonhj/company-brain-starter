@@ -1,6 +1,6 @@
 ---
 type: decision
-date: 2026-08-01
+date: 2026-08-06
 owner: Commercial Lead
 ---
 # Decision: Hold Cash Runway Above Nine Months
@@ -20,7 +20,7 @@ Growth spending outpaced revenue.
 [[Role - Commercial Lead]]
 
 ## Decision date
-2026-08-01
+2026-08-06
 
 ## Reversal conditions
 Loosen only after two profitable quarters.
@@ -29,7 +29,7 @@ Loosen only after two profitable quarters.
 - [[Meeting - Finance and Runway Check]]
 
 ## Six-month review date
-2027-01-28 — revisit whether this still holds.
+2027-02-02 — revisit whether this still holds.
 
 ## Related
 - [[Decision Log]]
