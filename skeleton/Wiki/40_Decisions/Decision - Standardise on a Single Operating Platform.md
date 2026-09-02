@@ -1,6 +1,6 @@
 ---
 type: decision
-date: 2026-08-10
+date: 2026-08-15
 owner: Head of Operations
 ---
 # Decision: Standardise on a Single Operating Platform
@@ -20,7 +20,7 @@ Three tools held overlapping data.
 [[Role - Head of Operations]]
 
 ## Decision date
-2026-08-10
+2026-08-15
 
 ## Reversal conditions
 Reverse if the platform raises prices above budget.
@@ -30,7 +30,7 @@ Reverse if the platform raises prices above budget.
 - [[Transcript - Weekly Operating Review]]
 
 ## Six-month review date
-2027-02-06 — revisit whether this still holds.
+2027-02-11 — revisit whether this still holds.
 
 ## Related
 - [[Decision Log]]

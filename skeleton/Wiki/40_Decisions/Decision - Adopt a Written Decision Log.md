@@ -1,6 +1,6 @@
 ---
 type: decision
-date: 2026-08-19
+date: 2026-08-24
 owner: Founder / CEO
 ---
 # Decision: Adopt a Written Decision Log
@@ -20,7 +20,7 @@ Decisions were made in chat and forgotten.
 [[Role - Founder CEO]]
 
 ## Decision date
-2026-08-19
+2026-08-24
 
 ## Reversal conditions
 Revisit if logging slows the team for two sprints.
@@ -30,7 +30,7 @@ Revisit if logging slows the team for two sprints.
 - [[Transcript - Quarterly Strategy Offsite]]
 
 ## Six-month review date
-2027-02-15 — revisit whether this still holds.
+2027-02-20 — revisit whether this still holds.
 
 ## Related
 - [[Decision Log]]

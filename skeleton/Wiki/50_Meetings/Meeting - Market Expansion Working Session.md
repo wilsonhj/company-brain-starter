@@ -1,11 +1,11 @@
 ---
 type: meeting
-date: 2026-07-31
+date: 2026-08-05
 category: Strategy
 ---
 # Market Expansion Working Session
 
-**Date.** 2026-07-31  ·  **Type.** Strategy
+**Date.** 2026-08-05  ·  **Type.** Strategy
 **Attendees.** Founder / CEO, Commercial Lead
 
 ## Summary

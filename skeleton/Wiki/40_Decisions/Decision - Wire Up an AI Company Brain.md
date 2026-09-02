@@ -1,6 +1,6 @@
 ---
 type: decision
-date: 2026-07-14
+date: 2026-07-19
 owner: Founder / CEO
 ---
 # Decision: Wire Up an AI Company Brain
@@ -20,7 +20,7 @@ Context lived in people's heads.
 [[Role - Founder CEO]]
 
 ## Decision date
-2026-07-14
+2026-07-19
 
 ## Reversal conditions
 Reassess if maintenance exceeds the time it saves.
@@ -29,7 +29,7 @@ Reassess if maintenance exceeds the time it saves.
 - [[Meeting - Quarterly Strategy Offsite]]
 
 ## Six-month review date
-2027-01-10 — revisit whether this still holds.
+2027-01-15 — revisit whether this still holds.
 
 ## Related
 - [[Decision Log]]
