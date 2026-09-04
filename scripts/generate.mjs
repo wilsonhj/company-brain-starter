@@ -18,7 +18,7 @@
 // A deterministic fallback dataset means the call can NEVER hard-fail a demo.
 
 import { execFile } from "node:child_process";
-import { mkdirSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { mkdirSync, readdirSync, writeFileSync, rmSync, existsSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -112,16 +112,24 @@ const zipDir = REQUESTED_ZIP_DIR
 
 // Writing a vault REPLACES its output folder. That is intended for --skeleton
 // (the repo rebuilds its own skeleton/), but --out can point anywhere, including
-// a vault someone has already filled in — so refuse a non-empty folder unless
-// they explicitly pass --force. Checked here, before the LLM call, so a refusal
-// costs no time and no tokens.
-if (REQUESTED_OUT && !FORCE && existsSync(outDir) && readdirSync(outDir).length) {
-  console.error(
-    `Refusing to overwrite ${outDir}\n` +
-      `  It already exists and is not empty, and generating REPLACES the whole folder.\n` +
-      `  Pass --force to replace it, or --out <a new folder> to keep it.`
-  );
-  process.exit(1);
+// a vault someone has already filled in — so refuse a non-empty folder (or a
+// file) unless they explicitly pass --force. Checked here, before the LLM call,
+// so a refusal costs no time and no tokens.
+if (REQUESTED_OUT && existsSync(outDir) && !FORCE) {
+  const st = statSync(outDir);
+  const reason = !st.isDirectory()
+    ? "It exists and is a file, and generating would replace it with a folder."
+    : readdirSync(outDir).length
+      ? "It already exists and is not empty, and generating REPLACES the whole folder."
+      : "";
+  if (reason) {
+    console.error(
+      `Refusing to overwrite ${outDir}\n` +
+        `  ${reason}\n` +
+        `  Pass --force to replace it, or --out <a new folder> to keep it.`
+    );
+    process.exit(1);
+  }
 }
 
 // ----------------------------------------------------------------------------
@@ -1289,11 +1297,37 @@ Consult the advisor named **$1** on the topic: **$2**.
   // ---- /steward — the scheduled upkeep pass.
   // Written to run unattended from a fresh session, so it must be entirely
   // self-contained: a scheduled run remembers nothing from the last one.
+  // git push is omitted on purpose: the GitHub Action pushes in a later step,
+  // and a local run must not push on its own. Path denies for Raw/, CLAUDE.md,
+  // and Wiki/40_Decisions/ live in .claude/settings.json — Claude Code enforces
+  // those; the prompt cannot.
+  const stewardAllowedTools =
+    "Read, Glob, Grep, Write, Edit, Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(mv:*)";
+  const stewardAllowedToolsArg =
+    "Read,Glob,Grep,Write,Edit,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git log:*),Bash(git diff:*),Bash(git rev-parse:*),Bash(mv:*)";
+
+  put(
+    ".claude/settings.json",
+    `{
+  "permissions": {
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git push:*)",
+      "Edit(CLAUDE.md)",
+      "Edit(**/CLAUDE.md)",
+      "Edit(Wiki/40_Decisions/**)",
+      "Edit(Raw/**)"
+    ]
+  }
+}
+`
+  );
+
   put(
     ".claude/commands/steward.md",
     `---
 description: Process the Inbox into the Wiki, refresh the operating surface, and commit the day's changes
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git:*), Bash(mv:*)
+allowed-tools: ${stewardAllowedTools}
 ---
 
 # /steward — scheduled brain steward
@@ -1312,6 +1346,9 @@ Read, in this order:
 
 ## 1. Triage \`Inbox/\`
 For every file in \`Inbox/\`:
+- **Looks like a secret** (\`.env\`, \`*.pem\`, \`*.key\`, \`id_rsa\`, filenames containing
+  \`credential\` or \`secret\`) → leave it in Inbox and list it for a human. Never
+  move it to \`Raw/\` and never stage it.
 - **A lasting source** (a transcript, a document, a clipping) → move the file
   *verbatim* into \`Raw/\`. Never rewrite a source while filing it.
 - **Meaning worth keeping** → distil it into the right \`Wiki/\` domain folder, and
@@ -1347,9 +1384,17 @@ for a human. Keep it short — \`outputs/\` is disposable, and git is the durabl
 record.
 
 ## 6. Commit
-\`git add -A\`, then commit with a one-line summary of the run — for example
-\`steward: filed 3 inbox items, proposed 1 decision\`. **Do not push.** Pushing is
-the human's call; make it only if they have explicitly asked you to.
+Stage only the paths this pass is allowed to change, then commit with a one-line
+summary — for example \`steward: filed 3 inbox items, proposed 1 decision\`:
+
+\`\`\`
+git add -- Inbox/ Raw/ MEMORY.md Dashboard.md Wiki/ ':!**/CLAUDE.md' ':!Wiki/40_Decisions'
+git add -- outputs/steward/<YYYY-MM-DD>.md
+\`\`\`
+
+Do not use \`git add -A\`. **Do not push.** Pushing is the human's call (or the
+workflow step that runs after this command). Make it only if they have
+explicitly asked you to.
 
 If this vault is not a git repository, skip this step and say so in your summary.
 
@@ -1361,6 +1406,7 @@ If this vault is not a git repository, skip this step and say so in your summary
   guardrails belong to the human.
 - Assert a fact you cannot trace to an Inbox item or a \`Raw/\` file.
 - Touch anything outside this vault.
+- Run \`git push\`. The allowlist does not include it.
 
 ## Finish
 Report what you filed, what you changed, what you are proposing, and what needs a
@@ -1371,10 +1417,108 @@ without committing.
 
   // ---- .github/workflows/steward.yml — schedules /steward on GitHub.
   // Inert inside this starter repo (GitHub only reads .github/workflows at
-  // the repository root); live once the vault is its own repo. Emitted as a
-  // JSON string literal, not a template literal, because the workflow is full
+  // the repository root); live once the vault is its own repo. Built from
+  // ordinary strings, not a template literal, because the workflow is full
   // of ${{ }} expressions that a template literal would try to interpolate.
-  put(".github/workflows/steward.yml", "# Nightly brain steward.\n#\n# Runs the /steward upkeep pass over this vault and pushes the result.\n#\n# Inert until you add a credential: set either ANTHROPIC_API_KEY or\n# CLAUDE_CODE_OAUTH_TOKEN as a repository secret (Settings -> Secrets and\n# variables -> Actions). Without one the job finishes green and does nothing,\n# rather than failing every night.\n#\n# Worth knowing before you trust the schedule:\n#   - GitHub runs scheduled workflows only from the default branch, and on\n#     public repositories it disables the schedule after 60 days with no\n#     repository activity.\n#   - A scheduled run is attributed to whoever last edited the cron line. If\n#     that account is a bot, add it to the action's allowed_bots input.\n#   - Run it by hand from the Actions tab a few times first. The early runs are\n#     where you find out whether its triage judgment matches yours.\nname: Brain steward\n\non:\n  schedule:\n    - cron: \"0 3 * * *\"\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  id-token: write\n\nconcurrency:\n  group: brain-steward\n  cancel-in-progress: false\n\njobs:\n  steward:\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n    steps:\n      - name: Check for a Claude credential\n        id: creds\n        env:\n          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}\n          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}\n        run: |\n          if [ -n \"$API_KEY\" ] || [ -n \"$OAUTH_TOKEN\" ]; then\n            echo \"configured=true\" >> \"$GITHUB_OUTPUT\"\n          else\n            echo \"configured=false\" >> \"$GITHUB_OUTPUT\"\n            echo \"No ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret is set, so the steward did not run.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n\n      - name: Check out the vault\n        if: steps.creds.outputs.configured == 'true'\n        uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n\n      - name: Give the steward a git identity\n        if: steps.creds.outputs.configured == 'true'\n        run: |\n          git config user.name \"brain-steward[bot]\"\n          git config user.email \"brain-steward@users.noreply.github.com\"\n\n      - name: Run the steward\n        if: steps.creds.outputs.configured == 'true'\n        uses: anthropics/claude-code-action@v1\n        with:\n          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}\n          # Authenticating with a Claude subscription instead? Delete the line\n          # above and uncomment this one:\n          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}\n          prompt: |\n            Read .claude/commands/steward.md and carry out its instructions\n            exactly, on this repository. Honour every limit it sets, including\n            all of the ones listed under \"Never\".\n            Do not push. A later workflow step does that.\n          # A plain-text prompt does not inherit the command file's\n          # allowed-tools frontmatter, so the same tools are granted here.\n          claude_args: |\n            --allowedTools \"Read,Glob,Grep,Write,Edit,Bash(git:*),Bash(mv:*)\"\n            --max-turns 40\n\n      - name: Push what the steward committed\n        if: steps.creds.outputs.configured == 'true'\n        run: |\n          if [ -n \"$(git log \"origin/${GITHUB_REF_NAME}..HEAD\" --oneline)\" ]; then\n            git push origin \"HEAD:${GITHUB_REF_NAME}\"\n            echo \"Pushed the steward's commit.\" >> \"$GITHUB_STEP_SUMMARY\"\n          else\n            echo \"Nothing to push - the steward made no commit.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n");
+  put(
+    ".github/workflows/steward.yml",
+    [
+      "# Nightly brain steward.",
+      "#",
+      "# Runs the /steward upkeep pass over this vault and pushes the result.",
+      "#",
+      "# Inert until you add a credential: set either ANTHROPIC_API_KEY or",
+      "# CLAUDE_CODE_OAUTH_TOKEN as a repository secret (Settings -> Secrets and",
+      "# variables -> Actions). Without one the job finishes green and does nothing,",
+      "# rather than failing every night. Both inputs are passed through; an empty",
+      "# secret is ignored, so either credential is enough.",
+      "#",
+      "# Worth knowing before you trust the schedule:",
+      "#   - GitHub runs scheduled workflows only from the default branch, and on",
+      "#     public repositories it disables the schedule after 60 days with no",
+      "#     repository activity.",
+      "#   - A scheduled run is attributed to whoever last edited the cron line. If",
+      "#     that account is a bot, add it to the action's allowed_bots input.",
+      "#   - Run it by hand from the Actions tab a few times first. The early runs are",
+      "#     where you find out whether its triage judgment matches yours.",
+      "name: Brain steward",
+      "",
+      "on:",
+      "  schedule:",
+      '    - cron: "0 3 * * *"',
+      "  workflow_dispatch:",
+      "",
+      "permissions:",
+      "  contents: write",
+      "  id-token: write",
+      "",
+      "concurrency:",
+      "  group: brain-steward",
+      "  cancel-in-progress: false",
+      "",
+      "jobs:",
+      "  steward:",
+      "    runs-on: ubuntu-latest",
+      "    timeout-minutes: 20",
+      "    steps:",
+      "      - name: Check for a Claude credential",
+      "        id: creds",
+      "        env:",
+      "          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}",
+      "          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}",
+      "        run: |",
+      '          if [ -n "$API_KEY" ] || [ -n "$OAUTH_TOKEN" ]; then',
+      '            echo "configured=true" >> "$GITHUB_OUTPUT"',
+      "          else",
+      '            echo "configured=false" >> "$GITHUB_OUTPUT"',
+      '            echo "No ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret is set, so the steward did not run." >> "$GITHUB_STEP_SUMMARY"',
+      "          fi",
+      "",
+      "      - name: Check out the vault",
+      "        if: steps.creds.outputs.configured == 'true'",
+      "        uses: actions/checkout@v6",
+      "        with:",
+      "          fetch-depth: 0",
+      "",
+      "      - name: Give the steward a git identity",
+      "        if: steps.creds.outputs.configured == 'true'",
+      "        run: |",
+      '          git config user.name "brain-steward[bot]"',
+      '          git config user.email "brain-steward@users.noreply.github.com"',
+      "",
+      "      - name: Run the steward",
+      "        if: steps.creds.outputs.configured == 'true'",
+      "        uses: anthropics/claude-code-action@v1",
+      "        with:",
+      "          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}",
+      "          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}",
+      "          prompt: |",
+      "            Read .claude/commands/steward.md and carry out its instructions",
+      "            exactly, on this repository. Honour every limit it sets, including",
+      '            all of the ones listed under "Never".',
+      "            Do not push. A later workflow step does that.",
+      "          # A plain-text prompt does not inherit the command file's",
+      "          # allowed-tools frontmatter, so the same tools are granted here.",
+      "          # git push is omitted from the allowlist; .claude/settings.json also",
+      "          # denies it, plus edits to Raw/, CLAUDE.md, and Wiki/40_Decisions/.",
+      "          claude_args: |",
+      '            --allowedTools "' + stewardAllowedToolsArg + '"',
+      '            --disallowedTools "Bash(git push:*),Bash(git push *)"',
+      "            --max-turns 40",
+      "",
+      "      - name: Push what the steward committed",
+      "        if: steps.creds.outputs.configured == 'true'",
+      "        run: |",
+      '          if [ -n "$(git log "origin/${GITHUB_REF_NAME}..HEAD" --oneline)" ]; then',
+      '            git push origin "HEAD:${GITHUB_REF_NAME}"',
+      "            echo \"Pushed the steward's commit.\" >> \"$GITHUB_STEP_SUMMARY\"",
+      "          else",
+      '            echo "Nothing to push - the steward made no commit." >> "$GITHUB_STEP_SUMMARY"',
+      "          fi",
+      "",
+    ].join("\n")
+  );
+
 
   return files;
 }
