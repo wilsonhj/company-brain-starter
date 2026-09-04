@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git push:*)",
+      "Edit(CLAUDE.md)",
+      "Edit(**/CLAUDE.md)",
+      "Edit(Wiki/40_Decisions/**)",
+      "Edit(Raw/**)"
+    ]
+  }
+}
