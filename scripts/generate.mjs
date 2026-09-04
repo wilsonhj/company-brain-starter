@@ -18,7 +18,7 @@
 // A deterministic fallback dataset means the call can NEVER hard-fail a demo.
 
 import { execFile } from "node:child_process";
-import { mkdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
+import { mkdirSync, readdirSync, writeFileSync, rmSync, existsSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, resolve } from "node:path";
 import { promisify } from "node:util";
@@ -59,6 +59,7 @@ function takeOption(names) {
 const REQUESTED_OUT = takeOption(["--out", "--out-dir"]);
 const REQUESTED_ZIP_DIR = takeOption(["--zip-dir"]);
 const SKELETON = argv.includes("--skeleton");
+const FORCE = argv.includes("--force");
 const NO_LLM = argv.includes("--no-llm") || SKELETON;
 const NO_ZIP = argv.includes("--no-zip") || SKELETON;
 // Auto-launch Obsidian on the finished vault (the "bloom" trophy moment).
@@ -77,7 +78,7 @@ if (SKELETON) {
   focus = positional.slice(2).join(" ").trim();
   if (!industry || !teamSize) {
     console.error(
-      'Usage: node scripts/generate.mjs "<industry>" <team_size> ["one-line focus"] [--out <folder>] [--zip-dir <folder>]'
+      'Usage: node scripts/generate.mjs "<industry>" <team_size> ["one-line focus"] [--out <folder>] [--zip-dir <folder>] [--force]'
     );
     process.exit(1);
   }
@@ -109,6 +110,20 @@ const zipDir = REQUESTED_ZIP_DIR
     ? join(dirname(outDir), "out")
     : join(SHOWCASE, "out");
 
+// Writing a vault REPLACES its output folder. That is intended for --skeleton
+// (the repo rebuilds its own skeleton/), but --out can point anywhere, including
+// a vault someone has already filled in — so refuse a non-empty folder unless
+// they explicitly pass --force. Checked here, before the LLM call, so a refusal
+// costs no time and no tokens.
+if (REQUESTED_OUT && !FORCE && existsSync(outDir) && readdirSync(outDir).length) {
+  console.error(
+    `Refusing to overwrite ${outDir}\n` +
+      `  It already exists and is not empty, and generating REPLACES the whole folder.\n` +
+      `  Pass --force to replace it, or --out <a new folder> to keep it.`
+  );
+  process.exit(1);
+}
+
 // ----------------------------------------------------------------------------
 // 1. data: one LLM call -> structured substitutions  (with safe fallback)
 // ----------------------------------------------------------------------------
@@ -116,7 +131,7 @@ function fallbackData() {
   const ind = String(industry).replace(/\b\w/g, (c) => c.toUpperCase());
   return {
     company_name: SKELETON ? "Your Company" : `${ind} Holdings`,
-    tagline: SKELETON ? "A starter company brain" : `Operating company in ${industry}`,
+    tagline: SKELETON ? "A starter CEO operating system" : `Operating company in ${industry}`,
     mission: `We build a durable ${industry} business by compounding good decisions, documenting how we operate, and giving every teammate (and every AI agent) the same context the founders have.`,
     glossary: [
       { term: "Company Brain", def: "The single source of truth for how we think, decide, and operate." },
@@ -384,9 +399,9 @@ function buildVault(d) {
   // ---- root CLAUDE.md (agent instructions: data flow + guardrails)
   put(
     "CLAUDE.md",
-    `# ${C} — Company Brain (root agent guide)
+    `# ${C} — CEO Operating System (root agent guide)
 
-${d.mission}
+${d.mission} This vault is a CEO operating system first: action, judgment, capital protection, and team clarity beat knowledge display.
 
 **Tagline:** ${d.tagline}
 **Industry:** ${industry}  ·  **Team size:** ${teamSize}${focus ? `  ·  **Focus:** ${focus}` : ""}
@@ -430,8 +445,8 @@ This brain has opinions. If you notice one of these patterns, say so and interve
 - **Delaying reversible decisions** — treating a cheap, undoable choice as if it were permanent. *Intervention:* flag that it's reversible and push to decide now.
 
 ## Map
+- \`Dashboard.md\` — daily CEO operating surface · ${link(N.dashboard)}
 - \`Inbox/\` — capture zone · ${link(N.cap1)}
-- \`Dashboard.md\` — CEO operating surface · ${link(N.dashboard)}
 - \`Raw/\` — immutable sources · ${link(N.raw1)}
 - \`Wiki/00_Company/\` — ${link(N.mission)}, ${link(N.structure)}, ${link(N.glossary)}
 - \`Wiki/10_Strategy/\` — ${link(N.strategy)}, ${link(N.kpi)}
@@ -474,10 +489,10 @@ See the full, permanent record in ${link(N.declog)}.
   // ---- Dashboard.md (CEO operating surface)
   put(
     "Dashboard.md",
-    fm({ type: "dashboard", cadence: "weekly", owner: "CEO" }) +
+    fm({ type: "dashboard", cadence: "daily", owner: d.roles[0].title }) +
       `# Dashboard — ${C}
 
-The current CEO operating surface: progress, judgment calls, drift, team load, and the next week's checklist. Update this before the weekly operating review; use ${link(N.memory)} for fast-changing state and ${link(N.intel)} for deep context.
+The daily CEO operating surface: progress, judgment calls, drift, team load, and the next week's checklist. This page is not a knowledge wall; it only surfaces what changes a decision, unblocks a person, protects capital, or updates the operating state. Update it before the weekly operating review; use ${link(N.memory)} for fast-changing state and ${link(N.intel)} for deep context.
 
 ## Company Progress
 **Quarter focus:** ${d.memory.quarter_focus}
@@ -512,7 +527,12 @@ ${d.risks
 Drift check: if a risk changes the thesis behind ${link(N.strategy)}, write the new call in ${link(N.declog)} instead of editing old decisions.
 
 ## Team Load
-${d.memory.team_deployment.map((x, i) => `- ${link(N.role(i % d.roles.length))} — ${x}`).join("\n")}
+${d.roles.map((r, i) => `- ${link(N.role(i))} — ${r.mandate}`).join("\n")}
+
+**Deployed this quarter**
+${d.memory.team_deployment.map((x) => `- ${x}`).join("\n")}
+
+Use ${link(N.oneonone)} when a load issue needs a conversation, not just a task.
 
 ## This Week Operating Checklist
 - [ ] Review ${link(N.kpi)} against the quarter focus in ${link(N.memory)}.
@@ -569,7 +589,9 @@ Welcome to the ${C} company brain. This is a 30-day plan to make it a habit. No 
 The most valuable thing in a ${teamSize}-person company is context: why we made each call, how each job is done, what we're betting on. Today that lives in people's heads and in chat. This vault moves it somewhere durable that both your team and an AI assistant can read.
 
 ## How it's organised (90 seconds)
-Knowledge flows in one direction: **Inbox → Raw → Wiki → outputs.**
+Start your day in ${link(N.dashboard)}. It is the current operating surface for the CEO: progress, judgment calls, risk drift, team load, and the weekly checklist.
+
+Knowledge still flows in one direction: **Inbox → Raw → Wiki → outputs.**
 You capture anything into \`Inbox/\`. Sources worth keeping move to \`Raw/\`. The distilled truth lives in \`Wiki/\` (organised by topic — company, strategy, operations, people, decisions, meetings). When you ask the brain a question, the answer lands in \`outputs/\`.
 Four files at the root hold the operating system: \`CLAUDE.md\` (the rules), ${link(N.dashboard)} (the daily surface), ${link(N.memory)} (today's state), and ${link(N.intel)} (the deep picture).
 
@@ -590,7 +612,7 @@ Point Claude Code at this folder. It reads the root \`CLAUDE.md\` and every fold
 Try: "Based on our decision log, why did we choose our lead vendor?" — the answer comes back with links to the exact notes. Then run \`/build-advisor\` to create an AI advisor tuned to the decisions *you* actually face. See ${link(N.advTemplate)}.
 
 ## Jump in
-- CEO operating surface → ${link(N.dashboard)}
+- Today's operating surface → ${link(N.dashboard)}
 - Today's state → ${link(N.memory)}
 - The deep picture → ${link(N.intel)}
 - Why we exist → ${link(N.mission)}
@@ -676,6 +698,7 @@ Query results, reports, and summaries an agent produces land here — for exampl
 - Everything here is **disposable**. It is derived from \`Wiki/\` and \`Raw/\`; regenerate it any time.
 - Never let an \`outputs/\` file become the source of truth. If a generated summary contains a new fact, that fact belongs in the Wiki.
 - Name outputs by the question they answer and the date, so they're easy to prune.
+- \`outputs/steward/<date>.md\` holds the log of each \`/steward\` run. Disposable like everything else here — the durable record of a run is its git commit.
 
 This folder starts empty — it fills up the first time you ask the brain a question with Claude Code.
 `
@@ -1263,6 +1286,95 @@ Consult the advisor named **$1** on the topic: **$2**.
 4. **Close** with a suggested \`Wiki/40_Decisions/\` entry (options, owner, reversal conditions, six-month review date) if a decision is warranted.
 `
   );
+  // ---- /steward — the scheduled upkeep pass.
+  // Written to run unattended from a fresh session, so it must be entirely
+  // self-contained: a scheduled run remembers nothing from the last one.
+  put(
+    ".claude/commands/steward.md",
+    `---
+description: Process the Inbox into the Wiki, refresh the operating surface, and commit the day's changes
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git:*), Bash(mv:*)
+---
+
+# /steward — scheduled brain steward
+
+Keep the ${C} brain moving without a human having to remember to do it. Run this
+on a schedule, or by hand whenever the Inbox has piled up.
+
+**Every run starts a fresh session with no memory of any previous run.**
+Everything you need is in this file and in the vault itself. Work only inside
+this vault.
+
+## Ground yourself first
+Read, in this order:
+1. \`CLAUDE.md\` — the rules you operate under here.
+2. \`MEMORY.md\` — where things stand right now.
+
+## 1. Triage \`Inbox/\`
+For every file in \`Inbox/\`:
+- **A lasting source** (a transcript, a document, a clipping) → move the file
+  *verbatim* into \`Raw/\`. Never rewrite a source while filing it.
+- **Meaning worth keeping** → distil it into the right \`Wiki/\` domain folder, and
+  link the \`Raw/\` note it came from. Follow that folder's own \`CLAUDE.md\`.
+- **Neither, or you cannot tell** → leave it where it is and list it in the run
+  log as needing a human. Never delete something you did not understand.
+
+Every claim you add to the Wiki must be traceable to a \`Raw/\` file or to the
+Inbox item you are processing. If you cannot cite it, do not write it.
+
+## 2. Refresh \`MEMORY.md\`
+Update the quarter focus, urgent and in-flight work, team deployment, and recent
+decisions to match what you just filed, and set the \`updated:\` date. Keep it to
+one page — it is a snapshot of the present, not a log.
+
+## 3. Apply the Dashboard admission bar
+Add or keep an item on \`Dashboard.md\` only if it can **change a decision,
+unblock a person, protect capital, or update the operating state**. Move
+anything that no longer clears that bar into the relevant Wiki note. The
+Dashboard is an operating surface, not a knowledge wall.
+
+## 4. Propose decisions — never write them
+If something you filed reads like a settled choice, draft the decision note
+**in the run log**, in the schema \`Wiki/40_Decisions/CLAUDE.md\` requires (options
+considered, owner, decision date, reversal conditions, linked memos, six-month
+review date), for a human to accept or reject. Do not create, edit, or supersede
+anything in \`Wiki/40_Decisions/\` yourself.
+
+## 5. Write the run log
+Write \`outputs/steward/<YYYY-MM-DD>.md\`: what you filed and where, which Wiki
+notes you changed, the decision notes you are proposing, and anything you left
+for a human. Keep it short — \`outputs/\` is disposable, and git is the durable
+record.
+
+## 6. Commit
+\`git add -A\`, then commit with a one-line summary of the run — for example
+\`steward: filed 3 inbox items, proposed 1 decision\`. **Do not push.** Pushing is
+the human's call; make it only if they have explicitly asked you to.
+
+If this vault is not a git repository, skip this step and say so in your summary.
+
+## Never
+- Edit or delete a note in \`Wiki/40_Decisions/\`. Superseding a decision is a
+  human act.
+- Edit anything in \`Raw/\`. It is the evidence.
+- Edit \`CLAUDE.md\`, at the root or in any folder. The rules and the behavioural
+  guardrails belong to the human.
+- Assert a fact you cannot trace to an Inbox item or a \`Raw/\` file.
+- Touch anything outside this vault.
+
+## Finish
+Report what you filed, what you changed, what you are proposing, and what needs a
+human. An empty Inbox with nothing to change is a fine outcome — say so and stop
+without committing.
+`
+  );
+
+  // ---- .github/workflows/steward.yml — schedules /steward on GitHub.
+  // Inert inside this starter repo (GitHub only reads .github/workflows at
+  // the repository root); live once the vault is its own repo. Emitted as a
+  // JSON string literal, not a template literal, because the workflow is full
+  // of ${{ }} expressions that a template literal would try to interpolate.
+  put(".github/workflows/steward.yml", "# Nightly brain steward.\n#\n# Runs the /steward upkeep pass over this vault and pushes the result.\n#\n# Inert until you add a credential: set either ANTHROPIC_API_KEY or\n# CLAUDE_CODE_OAUTH_TOKEN as a repository secret (Settings -> Secrets and\n# variables -> Actions). Without one the job finishes green and does nothing,\n# rather than failing every night.\n#\n# Worth knowing before you trust the schedule:\n#   - GitHub runs scheduled workflows only from the default branch, and on\n#     public repositories it disables the schedule after 60 days with no\n#     repository activity.\n#   - A scheduled run is attributed to whoever last edited the cron line. If\n#     that account is a bot, add it to the action's allowed_bots input.\n#   - Run it by hand from the Actions tab a few times first. The early runs are\n#     where you find out whether its triage judgment matches yours.\nname: Brain steward\n\non:\n  schedule:\n    - cron: \"0 3 * * *\"\n  workflow_dispatch:\n\npermissions:\n  contents: write\n  id-token: write\n\nconcurrency:\n  group: brain-steward\n  cancel-in-progress: false\n\njobs:\n  steward:\n    runs-on: ubuntu-latest\n    timeout-minutes: 20\n    steps:\n      - name: Check for a Claude credential\n        id: creds\n        env:\n          API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}\n          OAUTH_TOKEN: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}\n        run: |\n          if [ -n \"$API_KEY\" ] || [ -n \"$OAUTH_TOKEN\" ]; then\n            echo \"configured=true\" >> \"$GITHUB_OUTPUT\"\n          else\n            echo \"configured=false\" >> \"$GITHUB_OUTPUT\"\n            echo \"No ANTHROPIC_API_KEY or CLAUDE_CODE_OAUTH_TOKEN secret is set, so the steward did not run.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n\n      - name: Check out the vault\n        if: steps.creds.outputs.configured == 'true'\n        uses: actions/checkout@v6\n        with:\n          fetch-depth: 0\n\n      - name: Give the steward a git identity\n        if: steps.creds.outputs.configured == 'true'\n        run: |\n          git config user.name \"brain-steward[bot]\"\n          git config user.email \"brain-steward@users.noreply.github.com\"\n\n      - name: Run the steward\n        if: steps.creds.outputs.configured == 'true'\n        uses: anthropics/claude-code-action@v1\n        with:\n          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}\n          # Authenticating with a Claude subscription instead? Delete the line\n          # above and uncomment this one:\n          # claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}\n          prompt: |\n            Read .claude/commands/steward.md and carry out its instructions\n            exactly, on this repository. Honour every limit it sets, including\n            all of the ones listed under \"Never\".\n            Do not push. A later workflow step does that.\n          # A plain-text prompt does not inherit the command file's\n          # allowed-tools frontmatter, so the same tools are granted here.\n          claude_args: |\n            --allowedTools \"Read,Glob,Grep,Write,Edit,Bash(git:*),Bash(mv:*)\"\n            --max-turns 40\n\n      - name: Push what the steward committed\n        if: steps.creds.outputs.configured == 'true'\n        run: |\n          if [ -n \"$(git log \"origin/${GITHUB_REF_NAME}..HEAD\" --oneline)\" ]; then\n            git push origin \"HEAD:${GITHUB_REF_NAME}\"\n            echo \"Pushed the steward's commit.\" >> \"$GITHUB_STEP_SUMMARY\"\n          else\n            echo \"Nothing to push - the steward made no commit.\" >> \"$GITHUB_STEP_SUMMARY\"\n          fi\n");
 
   return files;
 }
@@ -1284,7 +1396,10 @@ function writeAll(map) {
 function countLinks(map) {
   let total = 0, minLinks = Infinity, hubs = 0;
   const sampleNotes = Object.entries(map).filter(
-    ([p]) => !p.endsWith("CLAUDE.md") && !p.startsWith(".claude/")
+    ([p]) =>
+      !p.endsWith("CLAUDE.md") &&
+      !p.startsWith(".claude/") &&
+      !p.startsWith(".github/")
   );
   for (const [, body] of sampleNotes) {
     const n = (body.match(/\[\[/g) || []).length;

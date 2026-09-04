@@ -17,7 +17,7 @@ Prereqs for the personalized path: [Claude Code](https://claude.com/claude-code)
 [Obsidian](https://obsidian.md) if you want the graph view.
 
 ```bash
-git clone https://github.com/spacegeologist/company-brain-starter.git
+git clone https://github.com/wilsonhj/company-brain-starter.git
 cd company-brain-starter
 claude
 ```
@@ -48,6 +48,10 @@ node scripts/generate.mjs "consumer goods" 200 --out ./my-company-brain
 
 That writes the vault to `./my-company-brain` and creates a shareable zip next to it in `./out/`.
 
+**`--out` replaces the folder you point it at.** If it already exists and has
+anything in it, the generator stops and tells you rather than overwriting your
+notes. Pass `--force` when you genuinely want to replace it.
+
 If you do not use Claude Code yet, open [`skeleton/`](skeleton/) in Obsidian and
 start from the generic version.
 
@@ -77,6 +81,12 @@ Most knowledge bases rot because everything is dumped in one pile and nobody tru
 Because the flow is explicit, everyone (and every AI agent) knows where to look: the Wiki is authoritative, Raw is the receipts, the Inbox is the to-do, and outputs are throwaway. That single rule is what keeps the brain trustworthy as it grows.
 
 Inside `Wiki/`, notes are organized by topic — company, strategy, operations, people, decisions, meetings — so the truth is easy to navigate.
+
+**`/steward` is what keeps the pipeline moving.** A brain that only advances when someone remembers to advance it will stall, so each vault ships a command that does the upkeep pass: triage `Inbox/` into `Raw/` and the `Wiki/`, refresh `MEMORY.md`, apply the Dashboard's admission bar, and commit the result. Run it on a schedule or by hand. It is written to be self-contained, because a scheduled run starts fresh with no memory of the last one.
+
+It has firm limits. It never edits `Raw/`, never edits any `CLAUDE.md`, and never writes to `Wiki/40_Decisions/` — it *proposes* decision notes in its run log and leaves the call to you. It commits but does not push. Superseding a decision stays a human act; the steward is there to file evidence, not to exercise judgment.
+
+**To put it on a timer,** each vault also ships `.github/workflows/steward.yml`: a nightly GitHub Action that runs the steward and pushes what it committed. It is inert until you add an `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` repository secret — without one the job finishes green and does nothing, rather than failing every night. Run it by hand from the Actions tab a few times before trusting the schedule. (The workflow only takes effect once the vault is its own repository; inside this starter it sits under `skeleton/` and never fires.)
 
 ---
 
@@ -149,7 +159,8 @@ skeleton/                      A complete generic company brain — copy it and 
     30_People/   40_Decisions/ 50_Meetings/                          each + CLAUDE.md
     30_People/_advisor_template.md, _advisor_router.md, Advisor - …  the advisor factory
   outputs/                     Generated answers land here (starts empty) + CLAUDE.md
-  .claude/commands/            /build-advisor and /advisor for your own agent
+  .claude/commands/            /steward, /build-advisor and /advisor for your own agent
+  .github/workflows/           steward.yml — the nightly run, off until you add a secret
 
 scripts/                       The generator that builds personalized vaults
 .claude/commands/              The /brain-blueprint command (for whoever runs the showcase)
@@ -239,10 +250,10 @@ The generator is intentionally **template-first and LLM-light**, because speed m
 - **The templates do the writing.** A Node script weaves those substitutions into 40+ notes and cross-links them deterministically, so link density and structure are guaranteed regardless of what the model returns.
 - **It never hard-fails.** If the AI call is slow or returns malformed JSON, a built-in generic dataset takes over and the vault still generates instantly — important when you're generating live in front of someone on a phone hotspot. The call's timeout sits *below* the 60-second budget, so even a worst-case slow response falls back rather than blowing the deadline.
 - **A speed detail that matters.** The single extraction call runs with extended thinking disabled (`MAX_THINKING_TOKENS=0`). For structured substitution the model doesn't need to "think out loud," and turning it off roughly halves the wall-clock time — the difference between comfortably under a minute and not.
-- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~59 files + one API call + zip." Node has a fast cold start, is native to the Claude Code ecosystem, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
+- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~61 files + one API call + zip." Node has a fast cold start, is native to the Claude Code ecosystem, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
 - **Why Claude (not another provider)?** This is a Claude Code command, so it uses your existing Claude authentication — no extra API key to manage — and Opus 4.8 gives the strongest industry-specific substitutions.
 
-Typical generation: **40–45 seconds**, 59 files, ~360 wikilinks, zero unresolved links, zero placeholder text.
+Typical generation: **40–45 seconds**, 61 files, ~360 wikilinks, zero unresolved links, zero placeholder text.
 
 ---
 
