@@ -5,7 +5,8 @@
 # Inert until you add a credential: set either ANTHROPIC_API_KEY or
 # CLAUDE_CODE_OAUTH_TOKEN as a repository secret (Settings -> Secrets and
 # variables -> Actions). Without one the job finishes green and does nothing,
-# rather than failing every night.
+# rather than failing every night. Both inputs are passed through; an empty
+# secret is ignored, so either credential is enough.
 #
 # Worth knowing before you trust the schedule:
 #   - GitHub runs scheduled workflows only from the default branch, and on
@@ -76,8 +77,11 @@ jobs:
             Do not push. A later workflow step does that.
           # A plain-text prompt does not inherit the command file's
           # allowed-tools frontmatter, so the same tools are granted here.
+          # git push is omitted from the allowlist; .claude/settings.json also
+          # denies it, plus edits to Raw/, CLAUDE.md, and Wiki/40_Decisions/.
           claude_args: |
-            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git:*),Bash(mv:*)"
+            --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git log:*),Bash(git diff:*),Bash(git rev-parse:*),Bash(mv:*)"
+            --disallowedTools "Bash(git push:*),Bash(git push *)"
             --max-turns 40
 
       - name: Push what the steward committed
