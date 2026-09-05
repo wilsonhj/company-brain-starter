@@ -1,6 +1,6 @@
 ---
 description: Process the Inbox into the Wiki, refresh the operating surface, and commit the day's changes
-allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git:*), Bash(mv:*)
+allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(mv:*)
 ---
 
 # /steward — scheduled brain steward
@@ -19,6 +19,9 @@ Read, in this order:
 
 ## 1. Triage `Inbox/`
 For every file in `Inbox/`:
+- **Looks like a secret** (`.env`, `*.pem`, `*.key`, `id_rsa`, filenames containing
+  `credential` or `secret`) → leave it in Inbox and list it for a human. Never
+  move it to `Raw/` and never stage it.
 - **A lasting source** (a transcript, a document, a clipping) → move the file
   *verbatim* into `Raw/`. Never rewrite a source while filing it.
 - **Meaning worth keeping** → distil it into the right `Wiki/` domain folder, and
@@ -54,9 +57,17 @@ for a human. Keep it short — `outputs/` is disposable, and git is the durable
 record.
 
 ## 6. Commit
-`git add -A`, then commit with a one-line summary of the run — for example
-`steward: filed 3 inbox items, proposed 1 decision`. **Do not push.** Pushing is
-the human's call; make it only if they have explicitly asked you to.
+Stage only the paths this pass is allowed to change, then commit with a one-line
+summary — for example `steward: filed 3 inbox items, proposed 1 decision`:
+
+```
+git add -- Inbox/ Raw/ MEMORY.md Dashboard.md Wiki/ ':!**/CLAUDE.md' ':!Wiki/40_Decisions'
+git add -- outputs/steward/<YYYY-MM-DD>.md
+```
+
+Do not use `git add -A`. **Do not push.** Pushing is the human's call (or the
+workflow step that runs after this command). Make it only if they have
+explicitly asked you to.
 
 If this vault is not a git repository, skip this step and say so in your summary.
 
@@ -68,6 +79,7 @@ If this vault is not a git repository, skip this step and say so in your summary
   guardrails belong to the human.
 - Assert a fact you cannot trace to an Inbox item or a `Raw/` file.
 - Touch anything outside this vault.
+- Run `git push`. The allowlist does not include it.
 
 ## Finish
 Report what you filed, what you changed, what you are proposing, and what needs a
