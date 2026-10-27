@@ -65,9 +65,6 @@ jobs:
         if: steps.creds.outputs.configured == 'true'
         uses: anthropics/claude-code-action@v1
         with:
-          # Pass both. Whichever secret you did not set arrives empty, and the
-          # action treats an empty credential as missing. The check above admits
-          # either secret, so this step has to be able to use either.
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           prompt: |
@@ -77,12 +74,31 @@ jobs:
             Do not push. A later workflow step does that.
           # A plain-text prompt does not inherit the command file's
           # allowed-tools frontmatter, so the same tools are granted here.
-          # git push is omitted from the allowlist; .claude/settings.json also
-          # denies it, plus edits to Raw/, CLAUDE.md, and Wiki/40_Decisions/.
+          # git push is omitted from the allowlist and denied outright, and
+          # steward-settings.json denies edits to Raw/, every CLAUDE.md,
+          # Wiki/40_Decisions/, .claude/ and .github/.
+          settings: .claude/steward-settings.json
           claude_args: |
             --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git log:*),Bash(git diff:*),Bash(git rev-parse:*),Bash(mv:*)"
-            --disallowedTools "Bash(git push:*),Bash(git push *)"
+            --disallowedTools "Bash(git push:*)"
             --max-turns 40
+
+      - name: Refuse a commit that touches guarded paths
+        if: steps.creds.outputs.configured == 'true'
+        # The deny rules and the prompt are both inside the agent's run. This
+        # check is not: it reads what was actually committed. Moving a file
+        # INTO Raw/ is the steward's job (an A line); changing or deleting
+        # anything already there is not.
+        run: |
+          bad=$(git diff --name-status --no-renames "origin/${GITHUB_REF_NAME}..HEAD" | awk -F'\t' '
+            $2 ~ /(^|\/)CLAUDE\.md$/ || $2 ~ /^Wiki\/40_Decisions\// || $2 ~ /^\.claude\// || $2 ~ /^\.github\// { print; next }
+            $2 ~ /^Raw\// && $1 != "A" { print }')
+          if [ -n "$bad" ]; then
+            echo "The steward's commit changes paths it must never touch. Nothing was pushed:"
+            echo "$bad"
+            { echo "Not pushed: the steward's commit touches guarded paths:"; echo; echo "$bad"; } >> "$GITHUB_STEP_SUMMARY"
+            exit 1
+          fi
 
       - name: Push what the steward committed
         if: steps.creds.outputs.configured == 'true'

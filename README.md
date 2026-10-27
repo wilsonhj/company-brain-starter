@@ -84,7 +84,13 @@ Inside `Wiki/`, notes are organized by topic — company, strategy, operations, 
 
 **`/steward` is what keeps the pipeline moving.** A brain that only advances when someone remembers to advance it will stall, so each vault ships a command that does the upkeep pass: triage `Inbox/` into `Raw/` and the `Wiki/`, refresh `MEMORY.md`, apply the Dashboard's admission bar, and commit the result. Run it on a schedule or by hand. It is written to be self-contained, because a scheduled run starts fresh with no memory of the last one.
 
-It has firm limits. It never edits `Raw/`, never edits any `CLAUDE.md`, and never writes to `Wiki/40_Decisions/` — it *proposes* decision notes in its run log and leaves the call to you. It commits but does not push. Superseding a decision stays a human act; the steward is there to file evidence, not to exercise judgment.
+It is told never to edit `Raw/`, any `CLAUDE.md`, or `Wiki/40_Decisions/` — it *proposes* decision notes in its run log and leaves the call to you — and to commit without pushing. Superseding a decision stays a human act; the steward is there to file evidence, not to exercise judgment.
+
+Those limits are held in three layers, because a prompt alone is not a guarantee:
+
+- **The instructions** in `.claude/commands/steward.md`.
+- **A permission file**, `.claude/steward-settings.json`, which Claude Code enforces: it denies `git push`, `git add -A`, and edits to `Raw/`, every `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/` and `.github/`. Run the steward by hand with `claude --settings .claude/steward-settings.json`, then `/steward`; the workflow loads it for you. It is deliberately *not* `.claude/settings.json` — a project-level deny applies to every session in the vault and cannot be overridden, so it would also stop *your* Claude from logging a decision or editing a `CLAUDE.md`.
+- **A check outside the agent**, in the workflow only: before pushing, it reads what was actually committed and refuses if anything already in `Raw/`, any `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/` or `.github/` changed. Moving new files *into* `Raw/` is allowed — that is the steward's job. A local run has no such check, so read its commit before you push it.
 
 **To put it on a timer,** each vault also ships `.github/workflows/steward.yml`: a nightly GitHub Action that runs the steward and pushes what it committed. It is inert until you add an `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` repository secret — without one the job finishes green and does nothing, rather than failing every night. The workflow passes both secrets into the action; an empty one is ignored, so either credential is enough. Run it by hand from the Actions tab a few times before trusting the schedule. (The workflow only takes effect once the vault is its own repository; inside this starter it sits under `skeleton/` and never fires.)
 
@@ -160,7 +166,7 @@ skeleton/                      A complete generic company brain — copy it and 
     30_People/_advisor_template.md, _advisor_router.md, Advisor - …  the advisor factory
   outputs/                     Generated answers land here (starts empty) + CLAUDE.md
   .claude/commands/            /steward, /build-advisor and /advisor for your own agent
-  .claude/settings.json        Steward deny rules: no git push, no edits to Raw/CLAUDE.md/decisions
+  .claude/steward-settings.json  Steward-only deny rules (loaded explicitly, not for every session)
   .github/workflows/           steward.yml — the nightly run, off until you add a secret
 
 scripts/                       The generator that builds personalized vaults

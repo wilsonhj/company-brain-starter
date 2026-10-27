@@ -1298,25 +1298,32 @@ Consult the advisor named **$1** on the topic: **$2**.
   // Written to run unattended from a fresh session, so it must be entirely
   // self-contained: a scheduled run remembers nothing from the last one.
   // git push is omitted on purpose: the GitHub Action pushes in a later step,
-  // and a local run must not push on its own. Path denies for Raw/, CLAUDE.md,
-  // and Wiki/40_Decisions/ live in .claude/settings.json — Claude Code enforces
-  // those; the prompt cannot.
+  // and a local run must not push on its own. The path denies live in
+  // .claude/steward-settings.json, which Claude Code enforces and the prompt
+  // cannot. It is deliberately NOT .claude/settings.json: a project-level deny
+  // applies to every session in the vault and no allow rule can override it,
+  // so it would stop the owner's own Claude from logging decisions, filing
+  // sources into Raw/, editing a CLAUDE.md, or pushing. Steward runs load it
+  // explicitly: the workflow via the action's `settings` input, a local run
+  // via `claude --settings .claude/steward-settings.json`.
   const stewardAllowedTools =
     "Read, Glob, Grep, Write, Edit, Bash(git add:*), Bash(git commit:*), Bash(git status:*), Bash(git log:*), Bash(git diff:*), Bash(git rev-parse:*), Bash(mv:*)";
   const stewardAllowedToolsArg =
     "Read,Glob,Grep,Write,Edit,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git log:*),Bash(git diff:*),Bash(git rev-parse:*),Bash(mv:*)";
 
   put(
-    ".claude/settings.json",
+    ".claude/steward-settings.json",
     `{
   "permissions": {
     "deny": [
-      "Bash(git push *)",
       "Bash(git push:*)",
+      "Bash(git add -A:*)",
+      "Bash(git add --all:*)",
       "Edit(CLAUDE.md)",
-      "Edit(**/CLAUDE.md)",
       "Edit(Wiki/40_Decisions/**)",
-      "Edit(Raw/**)"
+      "Edit(Raw/**)",
+      "Edit(.claude/**)",
+      "Edit(.github/**)"
     ]
   }
 }
@@ -1338,6 +1345,13 @@ on a schedule, or by hand whenever the Inbox has piled up.
 **Every run starts a fresh session with no memory of any previous run.**
 Everything you need is in this file and in the vault itself. Work only inside
 this vault.
+
+**Run it with its permission file.** By hand: start \`claude --settings
+.claude/steward-settings.json\` in the vault, then run \`/steward\`. The nightly
+workflow loads the same file. It denies pushing, \`git add -A\`, and edits to
+\`Raw/\`, every \`CLAUDE.md\`, \`Wiki/40_Decisions/\`, \`.claude/\` and \`.github/\`.
+It is kept out of \`.claude/settings.json\` on purpose, so those limits bind the
+steward and not your everyday sessions.
 
 ## Ground yourself first
 Read, in this order:
@@ -1388,9 +1402,14 @@ Stage only the paths this pass is allowed to change, then commit with a one-line
 summary — for example \`steward: filed 3 inbox items, proposed 1 decision\`:
 
 \`\`\`
-git add -- Inbox/ Raw/ MEMORY.md Dashboard.md Wiki/ ':!**/CLAUDE.md' ':!Wiki/40_Decisions'
+git add -u -- Inbox/
+git add -- Raw/ MEMORY.md Dashboard.md Wiki/ ':!**/CLAUDE.md' ':!Wiki/40_Decisions'
 git add -- outputs/steward/<YYYY-MM-DD>.md
 \`\`\`
+
+\`-u\` on \`Inbox/\` stages only what left it — the items you filed — and never a
+new file sitting there, so anything you left for a human (including anything
+that looks like a secret) stays unstaged.
 
 Do not use \`git add -A\`. **Do not push.** Pushing is the human's call (or the
 workflow step that runs after this command). Make it only if they have
@@ -1499,12 +1518,31 @@ without committing.
       "            Do not push. A later workflow step does that.",
       "          # A plain-text prompt does not inherit the command file's",
       "          # allowed-tools frontmatter, so the same tools are granted here.",
-      "          # git push is omitted from the allowlist; .claude/settings.json also",
-      "          # denies it, plus edits to Raw/, CLAUDE.md, and Wiki/40_Decisions/.",
+      "          # git push is omitted from the allowlist and denied outright, and",
+      "          # steward-settings.json denies edits to Raw/, every CLAUDE.md,",
+      "          # Wiki/40_Decisions/, .claude/ and .github/.",
+      "          settings: .claude/steward-settings.json",
       "          claude_args: |",
       '            --allowedTools "' + stewardAllowedToolsArg + '"',
-      '            --disallowedTools "Bash(git push:*),Bash(git push *)"',
+      '            --disallowedTools "Bash(git push:*)"',
       "            --max-turns 40",
+      "",
+      "      - name: Refuse a commit that touches guarded paths",
+      "        if: steps.creds.outputs.configured == 'true'",
+      "        # The deny rules and the prompt are both inside the agent's run. This",
+      "        # check is not: it reads what was actually committed. Moving a file",
+      "        # INTO Raw/ is the steward's job (an A line); changing or deleting",
+      "        # anything already there is not.",
+      "        run: |",
+      "          bad=$(git diff --name-status --no-renames \"origin/${GITHUB_REF_NAME}..HEAD\" | awk -F'\\t' '",
+      "            $2 ~ /(^|\\/)CLAUDE\\.md$/ || $2 ~ /^Wiki\\/40_Decisions\\// || $2 ~ /^\\.claude\\// || $2 ~ /^\\.github\\// { print; next }",
+      "            $2 ~ /^Raw\\// && $1 != \"A\" { print }')",
+      "          if [ -n \"$bad\" ]; then",
+      "            echo \"The steward's commit changes paths it must never touch. Nothing was pushed:\"",
+      "            echo \"$bad\"",
+      "            { echo \"Not pushed: the steward's commit touches guarded paths:\"; echo; echo \"$bad\"; } >> \"$GITHUB_STEP_SUMMARY\"",
+      "            exit 1",
+      "          fi",
       "",
       "      - name: Push what the steward committed",
       "        if: steps.creds.outputs.configured == 'true'",
