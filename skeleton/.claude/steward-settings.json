@@ -6,7 +6,6 @@
       "Bash(git add --all:*)",
       "Edit(CLAUDE.md)",
       "Edit(Wiki/40_Decisions/**)",
-      "Edit(Raw/**)",
       "Edit(.claude/**)",
       "Edit(.github/**)"
     ]

@@ -15,7 +15,10 @@ this vault.
 **Run it with its permission file.** By hand: start `claude --settings
 .claude/steward-settings.json` in the vault, then run `/steward`. The nightly
 workflow loads the same file. It denies pushing, `git add -A`, and edits to
-`Raw/`, every `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/` and `.github/`.
+every `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/` and `.github/`. It does not
+deny `Raw/`: a deny there also blocks moving a source *into* `Raw/`, which is
+your job. Keeping existing `Raw/` files unchanged is up to you, and the nightly
+workflow checks it before it pushes.
 It is kept out of `.claude/settings.json` on purpose, so those limits bind the
 steward and not your everyday sessions.
 

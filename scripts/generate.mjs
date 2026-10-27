@@ -1321,7 +1321,6 @@ Consult the advisor named **$1** on the topic: **$2**.
       "Bash(git add --all:*)",
       "Edit(CLAUDE.md)",
       "Edit(Wiki/40_Decisions/**)",
-      "Edit(Raw/**)",
       "Edit(.claude/**)",
       "Edit(.github/**)"
     ]
@@ -1349,7 +1348,10 @@ this vault.
 **Run it with its permission file.** By hand: start \`claude --settings
 .claude/steward-settings.json\` in the vault, then run \`/steward\`. The nightly
 workflow loads the same file. It denies pushing, \`git add -A\`, and edits to
-\`Raw/\`, every \`CLAUDE.md\`, \`Wiki/40_Decisions/\`, \`.claude/\` and \`.github/\`.
+every \`CLAUDE.md\`, \`Wiki/40_Decisions/\`, \`.claude/\` and \`.github/\`. It does not
+deny \`Raw/\`: a deny there also blocks moving a source *into* \`Raw/\`, which is
+your job. Keeping existing \`Raw/\` files unchanged is up to you, and the nightly
+workflow checks it before it pushes.
 It is kept out of \`.claude/settings.json\` on purpose, so those limits bind the
 steward and not your everyday sessions.
 
@@ -1519,8 +1521,10 @@ without committing.
       "          # A plain-text prompt does not inherit the command file's",
       "          # allowed-tools frontmatter, so the same tools are granted here.",
       "          # git push is omitted from the allowlist and denied outright, and",
-      "          # steward-settings.json denies edits to Raw/, every CLAUDE.md,",
-      "          # Wiki/40_Decisions/, .claude/ and .github/.",
+      "          # steward-settings.json denies edits to every CLAUDE.md,",
+      "          # Wiki/40_Decisions/, .claude/ and .github/. Not Raw/: a deny there",
+      "          # also blocks mv INTO Raw/, which is the steward's job. The next",
+      "          # step enforces that existing Raw/ files stay unchanged.",
       "          settings: .claude/steward-settings.json",
       "          claude_args: |",
       '            --allowedTools "' + stewardAllowedToolsArg + '"',
