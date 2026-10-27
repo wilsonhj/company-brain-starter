@@ -12,6 +12,13 @@ on a schedule, or by hand whenever the Inbox has piled up.
 Everything you need is in this file and in the vault itself. Work only inside
 this vault.
 
+**Run it with its permission file.** By hand: start `claude --settings
+.claude/steward-settings.json` in the vault, then run `/steward`. The nightly
+workflow loads the same file. It denies pushing, `git add -A`, and edits to
+`Raw/`, every `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/` and `.github/`.
+It is kept out of `.claude/settings.json` on purpose, so those limits bind the
+steward and not your everyday sessions.
+
 ## Ground yourself first
 Read, in this order:
 1. `CLAUDE.md` — the rules you operate under here.
@@ -61,9 +68,14 @@ Stage only the paths this pass is allowed to change, then commit with a one-line
 summary — for example `steward: filed 3 inbox items, proposed 1 decision`:
 
 ```
-git add -- Inbox/ Raw/ MEMORY.md Dashboard.md Wiki/ ':!**/CLAUDE.md' ':!Wiki/40_Decisions'
+git add -u -- Inbox/
+git add -- Raw/ MEMORY.md Dashboard.md Wiki/ ':!**/CLAUDE.md' ':!Wiki/40_Decisions'
 git add -- outputs/steward/<YYYY-MM-DD>.md
 ```
+
+`-u` on `Inbox/` stages only what left it — the items you filed — and never a
+new file sitting there, so anything you left for a human (including anything
+that looks like a secret) stays unstaged.
 
 Do not use `git add -A`. **Do not push.** Pushing is the human's call (or the
 workflow step that runs after this command). Make it only if they have

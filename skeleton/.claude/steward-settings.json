@@ -1,12 +1,14 @@
 {
   "permissions": {
     "deny": [
-      "Bash(git push *)",
       "Bash(git push:*)",
+      "Bash(git add -A:*)",
+      "Bash(git add --all:*)",
       "Edit(CLAUDE.md)",
-      "Edit(**/CLAUDE.md)",
       "Edit(Wiki/40_Decisions/**)",
-      "Edit(Raw/**)"
+      "Edit(Raw/**)",
+      "Edit(.claude/**)",
+      "Edit(.github/**)"
     ]
   }
 }
