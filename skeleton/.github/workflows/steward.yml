@@ -92,9 +92,17 @@ jobs:
         # INTO Raw/ is the steward's job (an A line); changing or deleting
         # anything already there is not.
         run: |
-          bad=$(git diff --name-status --no-renames "origin/${GITHUB_REF_NAME}..HEAD" | awk -F'\t' '
-            $2 ~ /(^|\/)CLAUDE\.md$/ || $2 ~ /^Wiki\/40_Decisions\// || $2 ~ /^\.claude\// || $2 ~ /^\.github\// { print; next }
-            $2 ~ /^Raw\// && $1 != "A" { print }')
+          bad=$(git diff -z --name-status --no-renames "origin/${GITHUB_REF_NAME}..HEAD" \
+            | awk 'BEGIN { RS = "\0"; ORS = "\n" }
+              NR % 2 == 1 { status = $0; next }
+              {
+                path = $0
+                if (path ~ /(^|\/)CLAUDE\.md$/ || path ~ /^Wiki\/40_Decisions\// || path ~ /^\.claude\// || path ~ /^\.github\//) {
+                  print status "\t" path
+                  next
+                }
+                if (path ~ /^Raw\// && status != "A") print status "\t" path
+              }')
           if [ -n "$bad" ]; then
             echo "The steward's commit changes paths it must never touch. Nothing was pushed:"
             echo "$bad"
