@@ -734,7 +734,7 @@ Query results, reports, and summaries an agent produces land here — for exampl
 - Never let an \`outputs/\` file become the source of truth. If a generated summary contains a new fact, that fact belongs in the Wiki.
 - Name outputs by the question they answer and the date, so they're easy to prune.
 
-This folder starts empty — it fills up the first time you ask the brain a question with Claude Code.
+This folder starts empty — it fills up the first time you ask the brain a question with your AI agent.
 `
   );
 
@@ -1119,7 +1119,7 @@ _What was actually decided? List each decision and its single owner. Anything re
 _What did we defer or quietly avoid deciding? Name it plainly — punts hide in the gaps._
 
 ## Behavioral flags for you
-_Where did you slip — scope creep, researching instead of deciding, conceding too early, dithering on a reversible call? See the guardrails in the root \`CLAUDE.md\`._
+_Where did you slip — scope creep, researching instead of deciding, conceding too early, dithering on a reversible call? See the guardrails in the root \`AGENTS.md\`._
 
 ## Comparison to prior similar meeting
 _How did this compare to the last meeting of this type? Better, worse, or the same trap again?_
@@ -1306,6 +1306,8 @@ Offer to add a row to ${link(N.advRouter)} mapping the decision type to the new 
     `---
 description: Live-discover your recurring decision types and draft a custom AI advisor for each
 allowed-tools: Read, Glob, Grep, Write
+model: claude-haiku-4-5-20251001
+effort: low
 ---
 
 # /build-advisor — advisor factory (live discovery)

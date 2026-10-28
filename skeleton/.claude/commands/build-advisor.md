@@ -1,6 +1,8 @@
 ---
 description: Live-discover your recurring decision types and draft a custom AI advisor for each
 allowed-tools: Read, Glob, Grep, Write
+model: claude-haiku-4-5-20251001
+effort: low
 ---
 
 # /build-advisor — advisor factory (live discovery)
