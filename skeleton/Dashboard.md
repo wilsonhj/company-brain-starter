@@ -3,52 +3,90 @@ type: dashboard
 cadence: daily
 owner: Founder / CEO
 ---
-# Dashboard
+# Dashboard — Your Company
 
-The daily operating surface for [[Role - Founder CEO]]. Start here before opening the wider Wiki. This page is not a knowledge wall; it only surfaces what changes a decision, unblocks a person, protects capital, or updates the operating state.
+The daily CEO operating surface: progress, judgment calls, drift, team load, and the next week's checklist. This page is not a knowledge wall; it only surfaces what changes a decision, unblocks a person, protects capital, or updates the operating state. Update it before the weekly operating review; use [[MEMORY]] for fast-changing state and [[Intelligence_snapshot]] for deep context.
 
 ## Company Progress
-- **Quarter focus:** Stabilise core operations and prove unit economics before expansion. See [[MEMORY]] and [[Annual Strategy]].
-- **Scoreboard:** Review [[KPI Dashboard]] for revenue run-rate, gross margin, runway, onboarding speed, retention, and decisions logged.
-- **Current bets:** [[Bet - Operational Leverage]], [[Bet - Premium Positioning]], [[Bet - AI-Native Operations]], and [[Bet - Disciplined Expansion]].
+**Quarter focus:** Stabilise core operations and prove unit economics before any expansion.
+
+**Active bets**
+- [[Bet - Operational Leverage]] — Document every process so the team doubles output without doubling headcount.
+- [[Bet - Premium Positioning]] — Win on quality and trust rather than competing on price.
+- [[Bet - AI-Native Operations]] — Give agents the same context as staff so routine work runs itself.
+- [[Bet - Disciplined Expansion]] — Enter one new market at a time, only after the core is profitable.
+
+**Scoreboard**
+| KPI | Target |
+|---|---|
+| Revenue Run-Rate | Grow 20% quarter over quarter |
+| Gross Margin | Hold above 45% |
+| Cash Runway | Never below 9 months |
+| Decisions Logged | 100% of consequential decisions captured |
+| Time-to-Onboard | New hire productive within 14 days |
+| Customer Retention | Net retention above 100% |
 
 ## CEO Must See
-- [ ] Is anything threatening the cash line in [[Decision - Hold Cash Runway Above Nine Months]]?
-- [ ] Is the platform migration still consistent with [[Decision - Standardise on a Single Operating Platform]]?
-- [ ] Did a new customer, vendor, hiring, or market signal require a decision-log update?
-- [ ] Did any surfaced note change this week's operating state in [[MEMORY]]?
+- [ ] Close the quarterly hiring plan — owner: [[Role - Founder CEO]]
+- [ ] Finalise the lead vendor contract — owner: [[Role - Head of Operations]]
+- [ ] Refresh the financial model — owner: [[Role - Commercial Lead]]
+
+**Key external dependencies**
+- **Primary Banking Partner** _(Finance)_ — Operating accounts and treasury.
+- **Core Operations Platform** _(Operations)_ — System of record for daily delivery.
+- **People / Payroll Provider** _(People)_ — Payroll, benefits, and compliance.
+- **Analytics Stack** _(Data)_ — Single dashboard feeding the KPI review.
 
 ## Decisions That Need Judgment
-- [[Decision - Enter One New Market First]] — confirm whether the next market still deserves focus before adding work.
-- [[Decision - Wire Up an AI Company Brain]] — decide which recurring workflow should become agent-readable next.
-- [[Decision Log]] — add or supersede decisions when facts change; do not leave them as meeting residue.
+- [[Decision - Adopt a Written Decision Log]] — current choice: **One note per decision in the brain**; reversal signal: Revisit if logging slows the team for two sprints.
+- [[Decision - Standardise on a Single Operating Platform]] — current choice: **Consolidate onto one platform**; reversal signal: Reverse if the platform raises prices above budget.
+- [[Decision - Hold Cash Runway Above Nine Months]] — current choice: **Hold 9 months minimum**; reversal signal: Loosen only after two profitable quarters.
+
+Use [[Advisor - The Operator]] for reversible operating calls; route unfamiliar decision types through [[_advisor_router]].
 
 ## Risks And Drift
-- [[Risk - Overextension]] — watch for expansion before the core model is stable.
-- [[Risk - Margin Compression]] — protect pricing power and unit economics.
-- [[Risk - Key-Person Dependency]] — move founder-only context into the Wiki when it affects execution.
-- Drift check: if a resurfaced note is interesting but does not affect a decision, unblock a person, protect capital, or change operating state, keep it in the relevant Wiki note rather than here.
+- [[Risk - Key-Person Dependency]] — exposure: Too much context lives only in founders' heads.; mitigation: Write it down weekly; the brain is the backup.
+- [[Risk - Margin Compression]] — exposure: Input costs rise faster than we can reprice.; mitigation: Track unit economics monthly; reprice on a schedule.
+- [[Risk - Overextension]] — exposure: Growing in too many directions at once.; mitigation: One bet at a time, with explicit reversal conditions.
+
+Drift check: if a risk changes the thesis behind [[Annual Strategy]], write the new call in [[Decision Log]] instead of editing old decisions.
 
 ## Team Load
-- [[Role - Founder CEO]] — strategy, capital allocation, and judgment calls.
-- [[Role - Head of Operations]] — platform migration and weekly operating rhythm.
-- [[Role - Commercial Lead]] — top accounts, retention, and premium positioning signals.
-- [[Role - Finance Lead]] — runway, margin, and cash discipline.
-- Use [[1on1 Template]] when a load issue needs a conversation, not just a task.
+- [[Role - Founder CEO]] — Sets strategy, allocates capital, owns the highest-leverage decisions.
+- [[Role - Head of Operations]] — Turns strategy into repeatable playbooks and keeps delivery on time.
+- [[Role - Commercial Lead]] — Owns revenue: pipeline, pricing, and key customer relationships.
+- [[Role - Finance Lead]] — Owns the model, cash runway, and the numbers behind every bet.
+
+**Deployed this quarter**
+- Operations on the platform migration
+- Commercial on the top ten accounts
+- Finance on the runway review
+
+Use [[1on1 Template]] when a load issue needs a conversation, not just a task.
 
 ## This Week Operating Checklist
-- [ ] Refresh [[MEMORY]] with urgent work, team deployment, and recent decisions.
-- [ ] Review [[KPI Dashboard]] and note any metric that changed the operating picture.
-- [ ] Clear `Inbox/` items that affect decisions, people, capital, or operating state.
-- [ ] Add new consequential choices to [[Decision Log]].
-- [ ] Run the cadence in [[Playbook - Weekly Operating Rhythm]].
-- [ ] Convert meeting residue into [[Meeting - Weekly Operating Review]] or the right Wiki note.
+- [ ] Review [[KPI Dashboard]] against the quarter focus in [[MEMORY]].
+- [ ] Clear Inbox items that affect [[Decision Log]] or [[Annual Strategy]].
+- [ ] Check every high-pressure vendor or platform dependency in [[Vendor Notes]].
+- [ ] Ask which decision is being delayed, then log it in [[Decision Log]].
+- [ ] Update this dashboard after the weekly review.
 
 ## Evidence And Deeper Views
-- Current state: [[MEMORY]]
-- Deep business context: [[Intelligence_snapshot]]
-- Strategy: [[Annual Strategy]]
-- Metrics: [[KPI Dashboard]]
-- Operating rhythm: [[Playbook - Weekly Operating Rhythm]]
-- Meetings: [[Meeting - Weekly Operating Review]], [[Meeting - Quarterly Strategy Offsite]], [[Meeting - Finance and Runway Check]]
-- Raw evidence: [[Transcript - Weekly Operating Review]], [[Transcript - Quarterly Strategy Offsite]]
+- Live state: [[MEMORY]]
+- Deep company context: [[Intelligence_snapshot]]
+- Strategy hub: [[Annual Strategy]]
+- KPI detail: [[KPI Dashboard]]
+- Decision record: [[Decision Log]]
+- People and ownership: [[Company Structure]]
+- Operating vendors: [[Vendor Notes]]
+- Meeting evidence: [[Meeting - Quarterly Strategy Offsite]], [[Meeting - Weekly Operating Review]]
+
+## Related
+- [[MEMORY]]
+- [[Intelligence_snapshot]]
+- [[Annual Strategy]]
+- [[KPI Dashboard]]
+- [[Decision Log]]
+- [[Company Structure]]
+- [[Vendor Notes]]
+- [[Advisor - The Operator]]

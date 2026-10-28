@@ -19,7 +19,7 @@ Prereqs for the personalized path: any one of [Claude Code](https://claude.com/c
 [Obsidian](https://obsidian.md) if you want the graph view.
 
 ```bash
-git clone https://github.com/spacegeologist/company-brain-starter.git
+git clone https://github.com/wilsonhj/company-brain-starter.git
 cd company-brain-starter
 claude   # or: codex, or: gemini
 ```
@@ -52,6 +52,10 @@ That writes the vault to `./my-company-brain` and creates a shareable zip next t
 The generator uses whichever of `claude`/`codex`/`gemini` it finds on your PATH
 (pick one explicitly with `--cli gemini`, and optionally pin a model with `--model <id>`).
 
+**`--out` replaces the folder you point it at.** If it already exists and has
+anything in it, the generator stops and tells you rather than overwriting your
+notes. Pass `--force` when you genuinely want to replace it.
+
 If you do not use an AI agent CLI yet, open [`skeleton/`](skeleton/) in Obsidian and
 start from the generic version.
 
@@ -81,6 +85,18 @@ Most knowledge bases rot because everything is dumped in one pile and nobody tru
 Because the flow is explicit, everyone (and every AI agent) knows where to look: the Wiki is authoritative, Raw is the receipts, the Inbox is the to-do, and outputs are throwaway. That single rule is what keeps the brain trustworthy as it grows.
 
 Inside `Wiki/`, notes are organized by topic — company, strategy, operations, people, decisions, meetings — so the truth is easy to navigate.
+
+**`/steward` is what keeps the pipeline moving.** A brain that only advances when someone remembers to advance it will stall, so each vault ships a command that does the upkeep pass: triage `Inbox/` into `Raw/` and the `Wiki/`, refresh `MEMORY.md`, apply the Dashboard's admission bar, and commit the result. Run it on a schedule or by hand. It is written to be self-contained, because a scheduled run starts fresh with no memory of the last one.
+
+It is told never to edit `Raw/`, any `AGENTS.md` (or its `CLAUDE.md` stub), or `Wiki/40_Decisions/` — it *proposes* decision notes in its run log and leaves the call to you — and to commit without pushing. Superseding a decision stays a human act; the steward is there to file evidence, not to exercise judgment.
+
+Those limits are held in three layers, because a prompt alone is not a guarantee:
+
+- **The instructions** in `.claude/commands/steward.md`.
+- **A permission file**, `.claude/steward-settings.json`, which Claude Code enforces: it denies `git push`, `git add -A`, and edits to `Raw/`, every `AGENTS.md` and `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/`, `.codex/`, `.gemini/` and `.github/`. Run the steward by hand with `claude --settings .claude/steward-settings.json`, then `/steward`; the workflow loads it for you. It is deliberately *not* `.claude/settings.json` — a project-level deny applies to every session in the vault and cannot be overridden, so it would also stop *your* Claude from logging a decision or editing a `CLAUDE.md`.
+- **A check outside the agent**, in the workflow only: before pushing, it reads what was actually committed and refuses if anything already in `Raw/`, any `AGENTS.md` or `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/`, `.codex/`, `.gemini/` or `.github/` changed. Moving new files *into* `Raw/` is allowed — that is the steward's job. A local run has no such check, so read its commit before you push it.
+
+**To put it on a timer,** each vault also ships `.github/workflows/steward.yml`: a nightly GitHub Action that runs the steward and pushes what it committed. It is inert until you add an `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` repository secret — without one the job finishes green and does nothing, rather than failing every night. The workflow passes both secrets into the action; an empty one is ignored, so either credential is enough. Run it by hand from the Actions tab a few times before trusting the schedule. (The workflow only takes effect once the vault is its own repository; inside this starter it sits under `skeleton/` and never fires.)
 
 ---
 
@@ -156,9 +172,11 @@ skeleton/                      A complete generic company brain — copy it and 
     30_People/   40_Decisions/ 50_Meetings/                          each + AGENTS.md
     30_People/_advisor_template.md, _advisor_router.md, Advisor - …  the advisor factory
   outputs/                     Generated answers land here (starts empty) + AGENTS.md
-  .claude/commands/            /build-advisor and /advisor for Claude Code
-  .codex/skills/               the same two commands for OpenAI Codex
+  .claude/commands/            /steward, /build-advisor and /advisor for Claude Code
+  .claude/steward-settings.json  Steward-only deny rules (loaded explicitly, not for every session)
+  .codex/skills/               /build-advisor and /advisor for OpenAI Codex
   .gemini/commands/            … and for Gemini CLI (+ settings.json pointing it at AGENTS.md)
+  .github/workflows/           steward.yml — the nightly run, off until you add a secret
 
 scripts/                       The generator that builds personalized vaults
 .claude/commands/              The /brain-blueprint command (for whoever runs the showcase)
@@ -250,10 +268,10 @@ The generator is intentionally **template-first and LLM-light**, because speed m
 - **The templates do the writing.** A Node script weaves those substitutions into 40+ notes and cross-links them deterministically, so link density and structure are guaranteed regardless of what the model returns.
 - **It never hard-fails.** If the AI call is slow or returns malformed JSON, a built-in generic dataset takes over and the vault still generates instantly — important when you're generating live in front of someone on a phone hotspot. The call's timeout sits *below* the 60-second budget, so even a worst-case slow response falls back rather than blowing the deadline.
 - **A speed detail that matters.** For structured substitution the model doesn't need to "think out loud," so where a CLI supports it the extraction call runs with extended thinking disabled (Claude Code: `MAX_THINKING_TOKENS=0`) — turning it off roughly halves the wall-clock time, the difference between comfortably under a minute and not.
-- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~70 files + one CLI call + zip." Node has a fast cold start, is already installed alongside every major agent CLI, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
+- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~77 files + one CLI call + zip." Node has a fast cold start, is already installed alongside every major agent CLI, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
 - **Why a CLI (not a provider SDK)?** The generator shells out to whichever agent CLI you already use — `claude`, `codex`, or `gemini` — so it rides your existing authentication and default model. No API key to manage, no provider lock-in; `--cli` and `--model` override the defaults when you want to.
 
-Typical generation: **40–45 seconds**, 74 files, ~360 wikilinks, zero unresolved links, zero placeholder text.
+Typical generation: **40–45 seconds**, 77 files, ~360 wikilinks, zero unresolved links, zero placeholder text.
 
 ---
 

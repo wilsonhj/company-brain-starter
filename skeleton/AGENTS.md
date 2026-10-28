@@ -34,8 +34,7 @@ Things move left to right, and only the right-hand side is authoritative:
 - **Wiki/** — the distilled, human-readable truth. An agent and a human turn Raw into Wiki *through dialogue*, not by dumping. Humans read here.
 - **outputs/** — query results, reports, and summaries an agent generates land here. Disposable; regenerate any time.
 
-When you process the Inbox: keep lasting sources in Raw, distil meaning into the right `Wiki/` domain folder, and cite the Raw source you used.
-Then update [[Dashboard]] only for items that affect decisions, people, capital, or operating state.
+When you process the Inbox: keep lasting sources in Raw, distil meaning into the right `Wiki/` domain folder, and cite the Raw source you used. Then update [[Dashboard]] only for items that affect decisions, people, capital, or operating state.
 
 ## Behavioral guardrails (watch the human for these)
 This brain has opinions. If you notice one of these patterns, say so and intervene:

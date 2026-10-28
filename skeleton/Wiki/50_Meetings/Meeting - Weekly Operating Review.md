@@ -1,11 +1,11 @@
 ---
 type: meeting
-date: 2026-05-27
+date: 2026-08-19
 category: Operations
 ---
 # Weekly Operating Review
 
-**Date.** 2026-05-27  ·  **Type.** Operations
+**Date.** 2026-08-19  ·  **Type.** Operations
 **Attendees.** Head of Operations, Commercial Lead
 **Source transcript.** [[Transcript - Weekly Operating Review]] (immutable, in Raw/)
 
