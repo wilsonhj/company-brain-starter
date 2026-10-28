@@ -75,8 +75,8 @@ jobs:
           # A plain-text prompt does not inherit the command file's
           # allowed-tools frontmatter, so the same tools are granted here.
           # git push is omitted from the allowlist and denied outright, and
-          # steward-settings.json denies edits to Raw/, every CLAUDE.md,
-          # Wiki/40_Decisions/, .claude/ and .github/.
+          # steward-settings.json denies edits to Raw/, every AGENTS.md and
+          # CLAUDE.md, Wiki/40_Decisions/, .claude/, .codex/, .gemini/ and .github/.
           settings: .claude/steward-settings.json
           claude_args: |
             --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git log:*),Bash(git diff:*),Bash(git rev-parse:*),Bash(mv:*)"
@@ -91,7 +91,7 @@ jobs:
         # anything already there is not.
         run: |
           bad=$(git diff --name-status --no-renames "origin/${GITHUB_REF_NAME}..HEAD" | awk -F'\t' '
-            $2 ~ /(^|\/)CLAUDE\.md$/ || $2 ~ /^Wiki\/40_Decisions\// || $2 ~ /^\.claude\// || $2 ~ /^\.github\// { print; next }
+            $2 ~ /(^|\/)(AGENTS|CLAUDE)\.md$/ || $2 ~ /^Wiki\/40_Decisions\// || $2 ~ /^\.(claude|codex|gemini|github)\// { print; next }
             $2 ~ /^Raw\// && $1 != "A" { print }')
           if [ -n "$bad" ]; then
             echo "The steward's commit changes paths it must never touch. Nothing was pushed:"

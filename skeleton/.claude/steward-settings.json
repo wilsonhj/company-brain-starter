@@ -4,10 +4,15 @@
       "Bash(git push:*)",
       "Bash(git add -A:*)",
       "Bash(git add --all:*)",
+      "Edit(AGENTS.md)",
+      "Edit(**/AGENTS.md)",
       "Edit(CLAUDE.md)",
+      "Edit(**/CLAUDE.md)",
       "Edit(Wiki/40_Decisions/**)",
       "Edit(Raw/**)",
       "Edit(.claude/**)",
+      "Edit(.codex/**)",
+      "Edit(.gemini/**)",
       "Edit(.github/**)"
     ]
   }

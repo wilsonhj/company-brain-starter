@@ -10,7 +10,7 @@ Start your day in [[Dashboard]]. It is the current operating surface for the CEO
 
 Knowledge still flows in one direction: **Inbox → Raw → Wiki → outputs.**
 You capture anything into `Inbox/`. Sources worth keeping move to `Raw/`. The distilled truth lives in `Wiki/` (organised by topic — company, strategy, operations, people, decisions, meetings). When you ask the brain a question, the answer lands in `outputs/`.
-Four files at the root hold the operating system: `CLAUDE.md` (the rules), [[Dashboard]] (the daily surface), [[MEMORY]] (today's state), and [[Intelligence_snapshot]] (the deep picture).
+Four files at the root hold the operating system: `AGENTS.md` (the rules), [[Dashboard]] (the daily surface), [[MEMORY]] (today's state), and [[Intelligence_snapshot]] (the deep picture).
 
 Only put surfaced notes on [[Dashboard]] when they can change a decision, unblock a person, protect capital, or update the operating state. Everything else belongs in the right Wiki note.
 
@@ -22,8 +22,8 @@ After every meeting, drop the transcript or a few bullets into `Inbox/`. Don't o
 **Week 2 — Add the decision log.**
 Each time you make a real choice, add a note in [[Decision Log]]: the options, what you picked, who owns it, what would reverse it, and when to review it. Five minutes each.
 
-**Week 3 — Wire up Claude Code.**
-Point Claude Code at this folder. It reads the root `CLAUDE.md` and every folder's `CLAUDE.md` automatically, so it already knows how your company works. Ask it to process your week's Inbox into the Wiki for you, then update [[Dashboard]] only with items that change decisions, people, capital, or operating state.
+**Week 3 — Wire up an AI agent.**
+Open this folder in the agent CLI you already use — Claude Code, OpenAI Codex, or Gemini CLI all work out of the box. Each reads the root `AGENTS.md` and every folder's `AGENTS.md` automatically (Claude Code via the `CLAUDE.md` stubs, Gemini via `.gemini/settings.json` — both included), so it already knows how your company works. Ask it to process your week's Inbox into the Wiki for you, then update [[Dashboard]] only with items that change decisions, people, capital, or operating state.
 
 **Week 4 — Ask your company a question, and build an advisor.**
 Try: "Based on our decision log, why did we choose our lead vendor?" — the answer comes back with links to the exact notes. Then run `/build-advisor` to create an AI advisor tuned to the decisions *you* actually face. See [[_advisor_template]].

@@ -4,7 +4,7 @@ updated: 2026-08-31
 ---
 # MEMORY — Your Company (state snapshot)
 
-> The fast-changing working memory. An agent reads this **first** to know where things stand *right now*. Update it weekly. For the deep reference see [[Intelligence_snapshot]]; for the rules see the root `CLAUDE.md`.
+> The fast-changing working memory. An agent reads this **first** to know where things stand *right now*. Update it weekly. For the deep reference see [[Intelligence_snapshot]]; for the rules see the root `AGENTS.md`.
 > Everything below is an example — **edit it to match your reality.**
 
 **Last updated:** 2026-08-31  ·  **Maintained by:** [[Role - Founder CEO]]

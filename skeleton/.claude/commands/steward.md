@@ -15,13 +15,14 @@ this vault.
 **Run it with its permission file.** By hand: start `claude --settings
 .claude/steward-settings.json` in the vault, then run `/steward`. The nightly
 workflow loads the same file. It denies pushing, `git add -A`, and edits to
-`Raw/`, every `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/` and `.github/`.
+`Raw/`, every `AGENTS.md` and `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/`,
+`.codex/`, `.gemini/` and `.github/`.
 It is kept out of `.claude/settings.json` on purpose, so those limits bind the
 steward and not your everyday sessions.
 
 ## Ground yourself first
 Read, in this order:
-1. `CLAUDE.md` — the rules you operate under here.
+1. `AGENTS.md` — the rules you operate under here (`CLAUDE.md` only imports it).
 2. `MEMORY.md` — where things stand right now.
 
 ## 1. Triage `Inbox/`
@@ -32,7 +33,7 @@ For every file in `Inbox/`:
 - **A lasting source** (a transcript, a document, a clipping) → move the file
   *verbatim* into `Raw/`. Never rewrite a source while filing it.
 - **Meaning worth keeping** → distil it into the right `Wiki/` domain folder, and
-  link the `Raw/` note it came from. Follow that folder's own `CLAUDE.md`.
+  link the `Raw/` note it came from. Follow that folder's own `AGENTS.md`.
 - **Neither, or you cannot tell** → leave it where it is and list it in the run
   log as needing a human. Never delete something you did not understand.
 
@@ -52,7 +53,7 @@ Dashboard is an operating surface, not a knowledge wall.
 
 ## 4. Propose decisions — never write them
 If something you filed reads like a settled choice, draft the decision note
-**in the run log**, in the schema `Wiki/40_Decisions/CLAUDE.md` requires (options
+**in the run log**, in the schema `Wiki/40_Decisions/AGENTS.md` requires (options
 considered, owner, decision date, reversal conditions, linked memos, six-month
 review date), for a human to accept or reject. Do not create, edit, or supersede
 anything in `Wiki/40_Decisions/` yourself.
@@ -69,7 +70,7 @@ summary — for example `steward: filed 3 inbox items, proposed 1 decision`:
 
 ```
 git add -u -- Inbox/
-git add -- Raw/ MEMORY.md Dashboard.md Wiki/ ':!**/CLAUDE.md' ':!Wiki/40_Decisions'
+git add -- Raw/ MEMORY.md Dashboard.md Wiki/ ':!**/AGENTS.md' ':!**/CLAUDE.md' ':!Wiki/40_Decisions'
 git add -- outputs/steward/<YYYY-MM-DD>.md
 ```
 
@@ -87,8 +88,9 @@ If this vault is not a git repository, skip this step and say so in your summary
 - Edit or delete a note in `Wiki/40_Decisions/`. Superseding a decision is a
   human act.
 - Edit anything in `Raw/`. It is the evidence.
-- Edit `CLAUDE.md`, at the root or in any folder. The rules and the behavioural
-  guardrails belong to the human.
+- Edit `AGENTS.md` or its `CLAUDE.md` stub, at the root or in any folder, or
+  anything under `.claude/`, `.codex/` or `.gemini/` (the commands and skills that
+  steer agents). The rules and the behavioural guardrails belong to the human.
 - Assert a fact you cannot trace to an Inbox item or a `Raw/` file.
 - Touch anything outside this vault.
 - Run `git push`. The allowlist does not include it.
