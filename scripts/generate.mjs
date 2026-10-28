@@ -1302,8 +1302,8 @@ Consult the advisor named **$1** on the topic: **$2**.
   // .claude/steward-settings.json, which Claude Code enforces and the prompt
   // cannot. It is deliberately NOT .claude/settings.json: a project-level deny
   // applies to every session in the vault and no allow rule can override it,
-  // so it would stop the owner's own Claude from logging decisions, filing
-  // sources into Raw/, editing a CLAUDE.md, or pushing. Steward runs load it
+  // so it would stop the owner's own Claude from logging decisions, editing a
+  // CLAUDE.md, or pushing. Steward runs load it
   // explicitly: the workflow via the action's `settings` input, a local run
   // via `claude --settings .claude/steward-settings.json`.
   const stewardAllowedTools =
@@ -1350,8 +1350,9 @@ this vault.
 workflow loads the same file. It denies pushing, \`git add -A\`, and edits to
 every \`CLAUDE.md\`, \`Wiki/40_Decisions/\`, \`.claude/\` and \`.github/\`. It does not
 deny \`Raw/\`: a deny there also blocks moving a source *into* \`Raw/\`, which is
-your job. Keeping existing \`Raw/\` files unchanged is up to you, and the nightly
-workflow checks it before it pushes.
+your job. Do not change or delete an existing \`Raw/\` file. The permission file
+will not stop you. The nightly workflow rejects that commit before it pushes.
+A hand run has no such check.
 It is kept out of \`.claude/settings.json\` on purpose, so those limits bind the
 steward and not your everyday sessions.
 

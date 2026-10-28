@@ -17,8 +17,9 @@ this vault.
 workflow loads the same file. It denies pushing, `git add -A`, and edits to
 every `CLAUDE.md`, `Wiki/40_Decisions/`, `.claude/` and `.github/`. It does not
 deny `Raw/`: a deny there also blocks moving a source *into* `Raw/`, which is
-your job. Keeping existing `Raw/` files unchanged is up to you, and the nightly
-workflow checks it before it pushes.
+your job. Do not change or delete an existing `Raw/` file. The permission file
+will not stop you. The nightly workflow rejects that commit before it pushes.
+A hand run has no such check.
 It is kept out of `.claude/settings.json` on purpose, so those limits bind the
 steward and not your everyday sessions.
 
