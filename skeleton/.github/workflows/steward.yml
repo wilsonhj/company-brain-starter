@@ -75,8 +75,10 @@ jobs:
           # A plain-text prompt does not inherit the command file's
           # allowed-tools frontmatter, so the same tools are granted here.
           # git push is omitted from the allowlist and denied outright, and
-          # steward-settings.json denies edits to Raw/, every CLAUDE.md,
-          # Wiki/40_Decisions/, .claude/ and .github/.
+          # steward-settings.json denies edits to every CLAUDE.md,
+          # Wiki/40_Decisions/, .claude/ and .github/. Not Raw/: a deny there
+          # also blocks mv INTO Raw/, which is the steward's job. The next
+          # step enforces that existing Raw/ files stay unchanged.
           settings: .claude/steward-settings.json
           claude_args: |
             --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git log:*),Bash(git diff:*),Bash(git rev-parse:*),Bash(mv:*)"
@@ -90,9 +92,17 @@ jobs:
         # INTO Raw/ is the steward's job (an A line); changing or deleting
         # anything already there is not.
         run: |
-          bad=$(git diff --name-status --no-renames "origin/${GITHUB_REF_NAME}..HEAD" | awk -F'\t' '
-            $2 ~ /(^|\/)CLAUDE\.md$/ || $2 ~ /^Wiki\/40_Decisions\// || $2 ~ /^\.claude\// || $2 ~ /^\.github\// { print; next }
-            $2 ~ /^Raw\// && $1 != "A" { print }')
+          bad=$(git diff -z --name-status --no-renames "origin/${GITHUB_REF_NAME}..HEAD" \
+            | awk 'BEGIN { RS = "\0"; ORS = "\n" }
+              NR % 2 == 1 { status = $0; next }
+              {
+                path = $0
+                if (path ~ /(^|\/)CLAUDE\.md$/ || path ~ /^Wiki\/40_Decisions\// || path ~ /^\.claude\// || path ~ /^\.github\//) {
+                  print status "\t" path
+                  next
+                }
+                if (path ~ /^Raw\// && status != "A") print status "\t" path
+              }')
           if [ -n "$bad" ]; then
             echo "The steward's commit changes paths it must never touch. Nothing was pushed:"
             echo "$bad"

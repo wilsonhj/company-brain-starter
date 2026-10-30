@@ -1302,8 +1302,8 @@ Consult the advisor named **$1** on the topic: **$2**.
   // .claude/steward-settings.json, which Claude Code enforces and the prompt
   // cannot. It is deliberately NOT .claude/settings.json: a project-level deny
   // applies to every session in the vault and no allow rule can override it,
-  // so it would stop the owner's own Claude from logging decisions, filing
-  // sources into Raw/, editing a CLAUDE.md, or pushing. Steward runs load it
+  // so it would stop the owner's own Claude from logging decisions, editing a
+  // CLAUDE.md, or pushing. Steward runs load it
   // explicitly: the workflow via the action's `settings` input, a local run
   // via `claude --settings .claude/steward-settings.json`.
   const stewardAllowedTools =
@@ -1321,7 +1321,6 @@ Consult the advisor named **$1** on the topic: **$2**.
       "Bash(git add --all:*)",
       "Edit(CLAUDE.md)",
       "Edit(Wiki/40_Decisions/**)",
-      "Edit(Raw/**)",
       "Edit(.claude/**)",
       "Edit(.github/**)"
     ]
@@ -1349,7 +1348,11 @@ this vault.
 **Run it with its permission file.** By hand: start \`claude --settings
 .claude/steward-settings.json\` in the vault, then run \`/steward\`. The nightly
 workflow loads the same file. It denies pushing, \`git add -A\`, and edits to
-\`Raw/\`, every \`CLAUDE.md\`, \`Wiki/40_Decisions/\`, \`.claude/\` and \`.github/\`.
+every \`CLAUDE.md\`, \`Wiki/40_Decisions/\`, \`.claude/\` and \`.github/\`. It does not
+deny \`Raw/\`: a deny there also blocks moving a source *into* \`Raw/\`, which is
+your job. Do not change or delete an existing \`Raw/\` file. The permission file
+will not stop you. The nightly workflow rejects that commit before it pushes.
+A hand run has no such check.
 It is kept out of \`.claude/settings.json\` on purpose, so those limits bind the
 steward and not your everyday sessions.
 
@@ -1519,8 +1522,10 @@ without committing.
       "          # A plain-text prompt does not inherit the command file's",
       "          # allowed-tools frontmatter, so the same tools are granted here.",
       "          # git push is omitted from the allowlist and denied outright, and",
-      "          # steward-settings.json denies edits to Raw/, every CLAUDE.md,",
-      "          # Wiki/40_Decisions/, .claude/ and .github/.",
+      "          # steward-settings.json denies edits to every CLAUDE.md,",
+      "          # Wiki/40_Decisions/, .claude/ and .github/. Not Raw/: a deny there",
+      "          # also blocks mv INTO Raw/, which is the steward's job. The next",
+      "          # step enforces that existing Raw/ files stay unchanged.",
       "          settings: .claude/steward-settings.json",
       "          claude_args: |",
       '            --allowedTools "' + stewardAllowedToolsArg + '"',
@@ -1534,9 +1539,17 @@ without committing.
       "        # INTO Raw/ is the steward's job (an A line); changing or deleting",
       "        # anything already there is not.",
       "        run: |",
-      "          bad=$(git diff --name-status --no-renames \"origin/${GITHUB_REF_NAME}..HEAD\" | awk -F'\\t' '",
-      "            $2 ~ /(^|\\/)CLAUDE\\.md$/ || $2 ~ /^Wiki\\/40_Decisions\\// || $2 ~ /^\\.claude\\// || $2 ~ /^\\.github\\// { print; next }",
-      "            $2 ~ /^Raw\\// && $1 != \"A\" { print }')",
+      "          bad=$(git diff -z --name-status --no-renames \"origin/${GITHUB_REF_NAME}..HEAD\" \\",
+      "            | awk 'BEGIN { RS = \"\\0\"; ORS = \"\\n\" }",
+      "              NR % 2 == 1 { status = $0; next }",
+      "              {",
+      "                path = $0",
+      "                if (path ~ /(^|\\/)CLAUDE\\.md$/ || path ~ /^Wiki\\/40_Decisions\\// || path ~ /^\\.claude\\// || path ~ /^\\.github\\//) {",
+      "                  print status \"\\t\" path",
+      "                  next",
+      "                }",
+      "                if (path ~ /^Raw\\// && status != \"A\") print status \"\\t\" path",
+      "              }')",
       "          if [ -n \"$bad\" ]; then",
       "            echo \"The steward's commit changes paths it must never touch. Nothing was pushed:\"",
       "            echo \"$bad\"",
