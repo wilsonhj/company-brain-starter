@@ -7,10 +7,11 @@ allowed-tools: Bash(node:*), Bash(open:*)
 # /brain-blueprint
 
 Generate a personalized Obsidian "company brain" starter vault for a visitor's
-industry. Template-first and LLM-light: one Claude (Opus 4.8) call fills in
-industry-specific substitutions, then the script weaves 40+ densely-interlinked
-notes — a data-flow vault (Inbox → Raw → Wiki → outputs), a three-layer memory
-triad (CLAUDE.md / MEMORY.md / Intelligence_snapshot.md), a layered `CLAUDE.md`
+industry. Template-first and LLM-light: one agent-CLI call (whichever of
+`claude`/`codex`/`gemini` is on PATH) fills in industry-specific substitutions,
+then the script weaves 40+ densely-interlinked notes — a data-flow vault
+(Inbox → Raw → Wiki → outputs), a three-layer memory triad
+(AGENTS.md / MEMORY.md / Intelligence_snapshot.md), a layered `AGENTS.md`
 in every folder, and an industry-tailored advisor. Target: under 60 seconds.
 By default the vault lands in `~/Showcase/blueprints/`; pass `--out ./folder`
 when you want it written somewhere specific.
@@ -31,7 +32,7 @@ After it runs, tell the visitor:
    personalized `.zip` (path printed above) or **email** it after.
 4. Start them on `Dashboard.md`: the CEO operating surface for progress, judgment
    calls, risk drift, team load, and this week's checklist.
-5. The takeaway line: *"Every folder has its own `CLAUDE.md` telling the AI how to
+5. The takeaway line: *"Every folder has its own `AGENTS.md` telling the AI how to
    behave there, knowledge flows Inbox → Raw → Wiki → outputs, and the root files
    split the operating system into rules, Dashboard, today's state, and the deep
    picture. The Dashboard only surfaces notes that change decisions, unblock people,

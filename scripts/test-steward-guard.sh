@@ -43,7 +43,7 @@ git config user.name "Guard Test"
 git config commit.gpgsign false
 git config core.quotepath true
 
-mkdir -p Raw Inbox Wiki/40_Decisions .claude .github/workflows
+mkdir -p Raw Inbox Wiki/40_Decisions Wiki/00_Company .claude .github/workflows .agents/skills/advisor .codex .gemini/commands
 printf 'plain\n' > Raw/plain.md
 printf 'cafe\n' > 'Raw/Café transcript.md'
 printf 'meeting\n' > 'Raw/会议.md'
@@ -51,6 +51,11 @@ printf 'hi\n' > 'Raw/say "hi".md'
 printf 'src\n' > Raw/rename-src.md
 printf 'note\n' > Inbox/note.md
 printf 'rules\n' > CLAUDE.md
+printf 'rules\n' > AGENTS.md
+printf 'rules\n' > Wiki/00_Company/AGENTS.md
+printf 'skill\n' > .agents/skills/advisor/SKILL.md
+printf 'cfg\n' > .codex/config.toml
+printf 'cmd\n' > .gemini/commands/advisor.toml
 printf 'decision\n' > Wiki/40_Decisions/Decision.md
 printf '{}\n' > .claude/steward-settings.json
 printf 'name: steward\n' > .github/workflows/steward.yml
@@ -184,6 +189,31 @@ prepare
 printf '\nchanged\n' >> .github/workflows/steward.yml
 commit_dirty 'modify workflow'
 expect 'modify .github/workflows/steward.yml' 1
+
+prepare
+printf '\nchanged\n' >> AGENTS.md
+commit_dirty 'modify agents'
+expect 'modify AGENTS.md' 1
+
+prepare
+printf '\nchanged\n' >> Wiki/00_Company/AGENTS.md
+commit_dirty 'modify nested agents'
+expect 'modify Wiki/00_Company/AGENTS.md' 1
+
+prepare
+printf '\nchanged\n' >> .agents/skills/advisor/SKILL.md
+commit_dirty 'modify codex skill'
+expect 'modify .agents/skills/advisor/SKILL.md' 1
+
+prepare
+printf '\nchanged\n' >> .codex/config.toml
+commit_dirty 'modify codex config'
+expect 'modify .codex/config.toml' 1
+
+prepare
+printf '\nchanged\n' >> .gemini/commands/advisor.toml
+commit_dirty 'modify gemini command'
+expect 'modify .gemini/commands/advisor.toml' 1
 
 prepare
 expect 'no commit ahead of origin' 0

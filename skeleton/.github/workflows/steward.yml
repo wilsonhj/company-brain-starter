@@ -75,10 +75,10 @@ jobs:
           # A plain-text prompt does not inherit the command file's
           # allowed-tools frontmatter, so the same tools are granted here.
           # git push is omitted from the allowlist and denied outright, and
-          # steward-settings.json denies edits to every CLAUDE.md,
-          # Wiki/40_Decisions/, .claude/ and .github/. Not Raw/: a deny there
-          # also blocks mv INTO Raw/, which is the steward's job. The next
-          # step enforces that existing Raw/ files stay unchanged.
+          # steward-settings.json denies edits to every AGENTS.md and CLAUDE.md,
+          # Wiki/40_Decisions/, .agents/, .claude/, .codex/, .gemini/ and .github/. Not Raw/:
+          # a deny there also blocks mv INTO Raw/, which is the steward's job.
+          # The next step enforces that existing Raw/ files stay unchanged.
           settings: .claude/steward-settings.json
           claude_args: |
             --allowedTools "Read,Glob,Grep,Write,Edit,Bash(git add:*),Bash(git commit:*),Bash(git status:*),Bash(git log:*),Bash(git diff:*),Bash(git rev-parse:*),Bash(mv:*)"
@@ -97,7 +97,7 @@ jobs:
               NR % 2 == 1 { status = $0; next }
               {
                 path = $0
-                if (path ~ /(^|\/)CLAUDE\.md$/ || path ~ /^Wiki\/40_Decisions\// || path ~ /^\.claude\// || path ~ /^\.github\//) {
+                if (path ~ /(^|\/)(AGENTS|CLAUDE)\.md$/ || path ~ /^Wiki\/40_Decisions\// || path ~ /^\.(agents|claude|codex|gemini|github)\//) {
                   print status "\t" path
                   next
                 }
