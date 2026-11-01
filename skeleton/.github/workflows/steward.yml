@@ -67,6 +67,11 @@ jobs:
         with:
           anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # Without this the action authenticates as the Claude GitHub App,
+          # which then has to be installed on the vault's repo. The steward
+          # only commits locally (the next steps push), so the workflow's own
+          # token is enough.
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             Read .claude/commands/steward.md and carry out its instructions
             exactly, on this repository. Honour every limit it sets, including

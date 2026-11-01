@@ -335,6 +335,16 @@ async function onPath(cmd) {
   }
 }
 
+// Which CLI a model id belongs to, by its naming family. null = unknown family,
+// which is passed through untouched (it may be a valid id we don't recognise).
+function modelFamily(model) {
+  const m = String(model || "").toLowerCase();
+  if (/^(claude|opus|sonnet|haiku|fable)\b/.test(m)) return "claude";
+  if (/^(gpt-|o\d|codex)/.test(m)) return "codex";
+  if (/^gemini/.test(m)) return "gemini";
+  return null;
+}
+
 async function pickCli() {
   if (REQUESTED_CLI) {
     if (!AGENT_CLIS[REQUESTED_CLI]) {
@@ -345,10 +355,46 @@ async function pickCli() {
     }
     return REQUESTED_CLI;
   }
+  // A pinned model from a known family picks its own CLI when that is installed,
+  // instead of whichever CLI happens to come first on PATH.
+  const family = modelFamily(REQUESTED_MODEL);
+  if (family && (await onPath(family))) return family;
   for (const name of Object.keys(AGENT_CLIS)) {
     if (await onPath(name)) return name;
   }
   return null;
+}
+
+// Return the first balanced {...} span in `text` that parses as a JSON object,
+// preferring one that looks like our payload (has company_name). Braces inside
+// JSON strings are skipped, so a banner like "{ok}" or a log line cannot shift
+// the boundaries the way slicing from the first "{" to the last "}" did.
+function extractJsonObject(text) {
+  let fallback = null;
+  for (let start = text.indexOf("{"); start !== -1; start = text.indexOf("{", start + 1)) {
+    let depth = 0, inStr = false, esc = false;
+    for (let i = start; i < text.length; i++) {
+      const c = text[i];
+      if (inStr) {
+        if (esc) esc = false;
+        else if (c === "\\") esc = true;
+        else if (c === '"') inStr = false;
+      } else if (c === '"') inStr = true;
+      else if (c === "{") depth++;
+      else if (c === "}" && --depth === 0) {
+        try {
+          const v = JSON.parse(text.slice(start, i + 1));
+          if (v && typeof v === "object" && !Array.isArray(v)) {
+            if ("company_name" in v) return v;
+            fallback = fallback || v;
+          }
+        } catch {}
+        break;
+      }
+    }
+  }
+  if (fallback) return fallback;
+  throw new Error("no JSON object found in the CLI's output");
 }
 
 async function getData() {
@@ -361,10 +407,21 @@ async function getData() {
     return { data: coerce(fallbackData()), source: "fallback" };
   }
   const cli = AGENT_CLIS[cliName];
+  // Sending a Claude model id to Codex (say) only fails, and the failure was
+  // swallowed into the generic fallback. Drop the pin loudly instead, so the
+  // run still personalizes with that CLI's default model.
+  let model = REQUESTED_MODEL;
+  const family = modelFamily(model);
+  if (family && family !== cliName) {
+    console.error(
+      `[warn] Model "${model}" looks like a ${family} model, but the ${cliName} CLI is being used; ignoring the model and using ${cliName}'s default.`
+    );
+    model = "";
+  }
   try {
     const { stdout } = await execFileP(
       cliName,
-      cli.args(buildPrompt(), REQUESTED_MODEL),
+      cli.args(buildPrompt(), model),
       {
         maxBuffer: 1024 * 1024 * 16,
         // Timeout sits BELOW the 60s SLA: if the model is slow, we abandon it
@@ -374,15 +431,10 @@ async function getData() {
         env: { ...process.env, ...(cli.env || {}) },
       }
     );
-    // All three CLIs print the response as text (possibly wrapped in a fence
-    // or preceded by log lines); extract the outermost JSON object.
-    let txt = String(stdout).trim();
-    txt = txt.replace(/^```[a-z]*\s*/i, "").replace(/```\s*$/i, "").trim();
-    const a = txt.indexOf("{");
-    const b = txt.lastIndexOf("}");
-    if (a >= 0 && b > a) txt = txt.slice(a, b + 1);
-    const data = JSON.parse(txt);
-    return { data: coerce(data), source: REQUESTED_MODEL ? `${cliName} (${REQUESTED_MODEL})` : cliName };
+    // All three CLIs print the response as text, possibly fenced or mixed with
+    // log or banner lines that contain braces of their own.
+    const data = extractJsonObject(String(stdout));
+    return { data: coerce(data), source: model ? `${cliName} (${model})` : cliName };
   } catch (e) {
     console.error(`[warn] LLM call failed (${e.message}); using fallback dataset.`);
     return { data: coerce(fallbackData()), source: "fallback" };
@@ -1593,6 +1645,11 @@ without committing.
       "        with:",
       "          anthropic_api_key: ${{ secrets.ANTHROPIC_API_KEY }}",
       "          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}",
+      "          # Without this the action authenticates as the Claude GitHub App,",
+      "          # which then has to be installed on the vault's repo. The steward",
+      "          # only commits locally (the next steps push), so the workflow's own",
+      "          # token is enough.",
+      "          github_token: ${{ secrets.GITHUB_TOKEN }}",
       "          prompt: |",
       "            Read .claude/commands/steward.md and carry out its instructions",
       "            exactly, on this repository. Honour every limit it sets, including",
