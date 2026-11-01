@@ -1,0 +1,27 @@
+# Checks for this starter repo itself (not a vault's workflows, which live
+# under skeleton/ and never run here).
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  checks:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Generator parses
+        run: node --check scripts/generate.mjs
+
+      # Runs the steward's real pre-push step, extracted from the workflow the
+      # generator ships, against a throwaway repo: quoted and non-ASCII paths,
+      # every guarded folder, and new files in Raw/ (which must pass).
+      - name: Steward push guard
+        run: bash scripts/test-steward-guard.sh
