@@ -105,7 +105,7 @@ Those limits are held in three layers, because a prompt alone is not a guarantee
 
 ## Idea 2 — The layered `AGENTS.md` (the part worth slowing down for)
 
-An [`AGENTS.md`](https://agents.md) file is a short, plain-English instruction sheet that an AI agent reads **automatically** before it does anything in that folder. This starter puts one in **every** folder — and that layering is the whole trick:
+An [`AGENTS.md`](https://agents.md) file is a short, plain-English instruction sheet for an AI agent working in that folder. Automatic discovery varies by CLI; the root guide explicitly requires reading applicable folder guides before working there. This starter puts one in **every** folder — and that layering is the whole trick:
 
 | Folder | What its `AGENTS.md` tells the AI |
 |---|---|
@@ -118,7 +118,7 @@ Because the guidance lives **next to the content**, the AI inherits your company
 
 The root `AGENTS.md` also carries **behavioral guardrails** — a short list of patterns the AI is told to watch for and push back on (scope creep, researching instead of deciding, giving away too much in a negotiation, dithering over a decision that's easily reversible). A brain with opinions is more useful than a brain that only answers.
 
-**Why `AGENTS.md` and not a tool-specific file?** It's the cross-tool standard, and the vault ships the small shims each tool needs so the *same* instructions work everywhere: OpenAI Codex reads `AGENTS.md` natively (including the per-folder ones); Claude Code reads it through the one-line `CLAUDE.md` stubs (`@AGENTS.md` imports) sitting next to each one; Gemini CLI is pointed at it by the included `.gemini/settings.json`. Write your rules once, and any of the three agents inherits them.
+**Why `AGENTS.md` and not a tool-specific file?** It's the cross-tool standard, and the vault ships the small shims each tool needs so the *same* instructions work everywhere: OpenAI Codex reads `AGENTS.md` natively along the project-root-to-launch-directory path; the root guide instructs it to read applicable descendant guides before working there; Claude Code reads it through the one-line `CLAUDE.md` stubs (`@AGENTS.md` imports) sitting next to each one; Gemini CLI is pointed at it by the included `.gemini/settings.json`. Write your rules once, and any of the three agents inherits them.
 
 ---
 

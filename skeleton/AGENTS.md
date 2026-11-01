@@ -13,6 +13,9 @@ We build a durable your company business by compounding good decisions, document
 
 Four root files, four jobs: rules vs. operating surface vs. live state vs. deep reference. Don't collapse them.
 
+## Folder rules
+Before reading or changing files in a folder, read every applicable descendant `AGENTS.md` from this vault root down to that folder. Repeat this check when moving to another folder. Do not assume your CLI loaded descendant guides at startup; their rules apply even when you launched at the vault root.
+
 ## Dashboard rule
 Treat [[Dashboard]] as the default daily entry point. It is not a graph showcase and not a list of interesting resurfaced notes.
 
