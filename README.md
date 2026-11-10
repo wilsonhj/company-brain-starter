@@ -1,5 +1,7 @@
 # Company Brain Starter
 
+> Forked from [spacegeologist/company-brain-starter](https://github.com/spacegeologist/company-brain-starter). This fork adds the `/steward` upkeep command, its nightly GitHub Action, and the push guard.
+
 **A company brain is your organization's shared memory — written so that both your team and an AI assistant can read it.** This starter turns that memory into a CEO operating system: a daily Dashboard, decision logs, operating rules, evidence, and example notes that help you act instead of merely browse.
 
 Open the [`skeleton/`](skeleton/) folder in [Obsidian](https://obsidian.md) and you'll see it light up — every note links to others, so your company's knowledge becomes a living map instead of a pile of documents.
@@ -233,7 +235,7 @@ It writes a fresh, industry-flavored vault (40+ interlinked notes, every folder'
 
 ## Adapting it to your industry (the demo is just an example)
 
-If you saw this at a live demo, the showcase vault was a six-person **mining exploration** company running an eight-country portfolio. That story is a worked example, nothing more — the architecture is deliberately industry-neutral. Here is exactly what changes for your industry, and what never does.
+If you saw the original author's live demo, the showcase vault was a six-person **mining exploration** company running an eight-country portfolio. That story is a worked example, nothing more — the architecture is deliberately industry-neutral. Here is exactly what changes for your industry, and what never does.
 
 **Changes with your industry — and `/brain-blueprint` re-seeds all of it automatically:**
 
