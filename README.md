@@ -2,65 +2,49 @@
 
 **A company brain is your organization's shared memory — written so that both your team and an AI assistant can read it.** This starter turns that memory into a CEO operating system: a daily Dashboard, decision logs, operating rules, evidence, and example notes that help you act instead of merely browse.
 
-Open the [`skeleton/`](skeleton/) folder in [Obsidian](https://obsidian.md) and you'll see it light up — every note links to others, so your company's knowledge becomes a living map instead of a pile of documents.
+Open the [`skeleton/`](skeleton/) folder in [Obsidian](https://obsidian.md) to explore the linked example notes, Dashboard, and folder-level agent guidance. The contents are sample material to replace with your own company evidence.
 
 ---
 
-## Start in 3 minutes
+## Current status
 
-You can use this repo in two modes:
+The generic vault and offline generator work today. A check of `main` at `c685631` on 2026-11-09 produced **77 files, 47 content notes and 364 wikilinks, with zero unresolved wikilinks**, plus a valid ZIP archive, using `--no-llm`. The offline regression script passed. These are results for the tested generic dataset, not a guarantee for every model response or future edit.
 
-- **No setup beyond Obsidian:** open [`skeleton/`](skeleton/) as a vault and start editing the generic company brain.
-- **Personalized starter:** use your AI agent CLI + Node.js to generate a fresh vault for your industry.
+Live Claude generation and the scheduled steward were not exercised in that check. The steward's guarded-path test currently fails its 15 denial cases on macOS with BSD `awk`; see [Validation and known limits](#validation-and-known-limits). [PR #8](https://github.com/wilsonhj/company-brain-starter/pull/8) is open with generator, automation and Linux CI changes; those fixes are not on `main`.
 
-Prereqs for the personalized path: any one of [Claude Code](https://claude.com/claude-code),
-[OpenAI Codex](https://developers.openai.com/codex/cli), or
-[Gemini CLI](https://github.com/google-gemini/gemini-cli), plus Node.js, and
-[Obsidian](https://obsidian.md) if you want the graph view.
+## Quick start
+
+**Use the generic vault:** clone this repository and open [`skeleton/`](skeleton/) as an Obsidian vault. No AI CLI is needed.
+
+**Generate an offline demo:** install Node.js, then run:
 
 ```bash
 git clone https://github.com/wilsonhj/company-brain-starter.git
 cd company-brain-starter
-claude   # or: codex, or: gemini
+node scripts/generate.mjs "software" 10 --out ./demo-company-brain --no-llm --no-open
 ```
 
-Launch your agent from the cloned repo root so it can see the repo's command
-files (`.claude/commands/`, `.agents/skills/`, `.gemini/commands/`). Then type:
+This writes a generic starter with the supplied industry and team size, without a model call or opening an application. Open `./demo-company-brain` in Obsidian and start at `Dashboard.md`. The default archive is written under `./out/`; the system `zip` command is required. Add `--no-zip` to skip archive creation.
 
-```text
-/brain-blueprint "your industry" <team_size> ["focus"]
-```
+Use a new output folder for each run. If an explicit `--out` path is a file or a non-empty directory, the generator refuses to replace it. `--force` removes that protection and replaces the folder and its contents.
 
-In Codex, skills are invoked with `$` rather than `/`, so type
-`$brain-blueprint "your industry" <team_size> ["focus"]` instead.
-
-Examples:
-
-```text
-/brain-blueprint "consumer goods" 200
-/brain-blueprint healthcare 50 "multi-site clinics"
-/brain-blueprint "financial services" 30 "PE fund"
-```
-
-The generated vault appears in `~/Showcase/blueprints/`. Open that folder in
-Obsidian to see the graph bloom, or use the `.zip` created there to share it.
-
-Prefer to generate into a local folder you choose?
+**Optional model personalization:** use an installed, authenticated agent CLI:
 
 ```bash
-node scripts/generate.mjs "consumer goods" 200 --out ./my-company-brain
+node scripts/generate.mjs "healthcare" 50 "multi-site clinics" --cli claude --out ./clinic-brain --no-open
 ```
 
-That writes the vault to `./my-company-brain` and creates a shareable zip next to it in `./out/`.
-The generator uses whichever of `claude`/`codex`/`gemini` it finds on your PATH
-(pick one explicitly with `--cli gemini`, and optionally pin a model with `--model <id>`).
+Supported generator adapters are `--cli claude`, `--cli codex` and `--cli gemini`. Without `--cli`, detection checks them in that order on `PATH`; `BRAIN_CLI` also selects one. `--model <id>` or `BRAIN_MODEL` pins a model, which must match the selected CLI on current `main`. The adapter uses the CLI's existing authentication and may consume its usage allowance. The summary's **Source** identifies whether model output or fallback data was used.
 
-**`--out` replaces the folder you point it at.** If it already exists and has
-anything in it, the generator stops and tells you rather than overwriting your
-notes. Pass `--force` when you genuinely want to replace it.
+The repository also supplies interactive wrappers. Launch the relevant CLI from the cloned repository root:
 
-If you do not use an AI agent CLI yet, open [`skeleton/`](skeleton/) in Obsidian and
-start from the generic version.
+| CLI | Blueprint invocation | Repository definition |
+|---|---|---|
+| Claude Code | `/brain-blueprint "software" 10` | [`.claude/commands/brain-blueprint.md`](.claude/commands/brain-blueprint.md) |
+| Codex | `$brain-blueprint "software" 10` | [`.agents/skills/brain-blueprint/SKILL.md`](.agents/skills/brain-blueprint/SKILL.md) |
+| Gemini CLI | `/brain-blueprint "software" 10` | [`.gemini/commands/brain-blueprint.toml`](.gemini/commands/brain-blueprint.toml) |
+
+Without an explicit `--out`, generated vaults go to `~/Showcase/blueprints/`, with archives in its `out/` folder. Obsidian auto-opening is attempted on macOS unless `--no-open` is set. For a presentation, prepare an offline vault first; model latency and personalization are optional.
 
 ---
 
@@ -70,7 +54,7 @@ In most companies under a few hundred people, the most valuable knowledge lives 
 
 A **company brain** fixes this by giving every consequential thing — your mission, your bets, your decisions, how each job is done — a single, durable home. The twist that makes it modern: it's written so an **AI agent can read it too**. Point a tool like [Claude Code](https://claude.com/claude-code), [OpenAI Codex](https://developers.openai.com/codex/cli), or [Gemini CLI](https://github.com/google-gemini/gemini-cli) at the folder and your company can suddenly *answer questions about itself*, with citations to the exact note.
 
-This starter is built on four ideas worth understanding. None of them require any software project to adopt.
+This starter is built on five ideas worth understanding. None of them require any software project to adopt.
 
 ---
 
@@ -89,17 +73,23 @@ Because the flow is explicit, everyone (and every AI agent) knows where to look:
 
 Inside `Wiki/`, notes are organized by topic — company, strategy, operations, people, decisions, meetings — so the truth is easy to navigate.
 
-**`/steward` is what keeps the pipeline moving.** A brain that only advances when someone remembers to advance it will stall, so each vault ships a command that does the upkeep pass: triage `Inbox/` into `Raw/` and the `Wiki/`, refresh `MEMORY.md`, apply the Dashboard's admission bar, and commit the result. Run it on a schedule or by hand. It is written to be self-contained, because a scheduled run starts fresh with no memory of the last one.
+**`/steward` is the Claude Code upkeep command.** A brain that only advances when someone remembers to advance it will stall, so each vault ships a command that does the upkeep pass: triage `Inbox/` into `Raw/` and the `Wiki/`, refresh `MEMORY.md`, apply the Dashboard's admission bar, and commit the result. Run it on a schedule or by hand. It is written to be self-contained, because a scheduled run starts fresh with no memory of the last one.
 
-It is told never to edit `Raw/`, any `AGENTS.md` (or its `CLAUDE.md` stub), or `Wiki/40_Decisions/` — it *proposes* decision notes in its run log and leaves the call to you — and to commit without pushing. Superseding a decision stays a human act; the steward is there to file evidence, not to exercise judgment.
+The generated vault supplies `/steward` for Claude Code only. Codex and Gemini receive advisor commands, but no steward command or equivalent steward permission enforcement.
 
-Those limits are held in three layers, because a prompt alone is not a guarantee:
+It is told never to edit existing files in `Raw/`, any `AGENTS.md` (or its `CLAUDE.md` stub), or `Wiki/40_Decisions/` — it *proposes* decision notes in its run log and leaves the call to you — and to commit without pushing. Superseding a decision stays a human act; the steward is there to file evidence, not to exercise judgment.
+
+The Claude steward has three intended controls. They do not apply to ordinary Codex or Gemini sessions:
 
 - **The instructions** in `.claude/commands/steward.md`.
 - **A permission file**, `.claude/steward-settings.json`, which Claude Code enforces: it denies `git push`, `git add -A`, and edits to every `AGENTS.md` and `CLAUDE.md`, `Wiki/40_Decisions/`, `.agents/`, `.claude/`, `.codex/`, `.gemini/` and `.github/`. It deliberately does not deny `Raw/`, because a deny there also blocks moving a source *into* `Raw/` — found on the first real run. So the permission file cannot stop a change to or a deletion of an existing `Raw/` file: the instructions forbid it, and the workflow check below rejects such a commit before it pushes. Run the steward by hand with `claude --settings .claude/steward-settings.json`, then `/steward`; the workflow loads it for you. It is deliberately *not* `.claude/settings.json` — a project-level deny applies to every session in the vault and cannot be overridden, so it would also stop *your* Claude from logging a decision or editing a `CLAUDE.md`.
-- **A check outside the agent**, in the workflow only: before pushing, it reads what was actually committed and refuses if anything already in `Raw/`, any `AGENTS.md` or `CLAUDE.md`, `Wiki/40_Decisions/`, `.agents/`, `.claude/`, `.codex/`, `.gemini/` or `.github/` changed. Moving new files *into* `Raw/` is allowed — that is the steward's job. A local run has no such check, so read its commit before you push it.
+- **A check outside the agent**, in the workflow only: before pushing, it reads the committed diff and is intended to reject changes to anything already in `Raw/`, any `AGENTS.md` or `CLAUDE.md`, `Wiki/40_Decisions/`, `.agents/`, `.claude/`, `.codex/`, `.gemini/` or `.github/`. Moving new files *into* `Raw/` is allowed — that is the steward's job. A local run has no such check, so read its commit before you push it.
 
-**To put it on a timer,** each vault also ships `.github/workflows/steward.yml`: a nightly GitHub Action that runs the steward and pushes what it committed. It is inert until you add an `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` repository secret — without one the job finishes green and does nothing, rather than failing every night. The workflow passes both secrets into the action; an empty one is ignored, so either credential is enough. Run it by hand from the Actions tab a few times before trusting the schedule. (The workflow only takes effect once the vault is its own repository; inside this starter it sits under `skeleton/` and never fires.)
+**Automation is a template, not an active service.** Each vault includes [`.github/workflows/steward.yml`](skeleton/.github/workflows/steward.yml), scheduled nightly on Ubuntu. It only becomes an active workflow after the generated vault is committed as its own GitHub repository with the workflow at that repository's root. Here it lives under `skeleton/` and does not run.
+
+The workflow requires an `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` repository secret; without one it exits successfully without running the steward. On current `main`, the Claude action is not passed an explicit workflow `GITHUB_TOKEN`, so additional GitHub App setup may be needed. [PR #8](https://github.com/wilsonhj/company-brain-starter/pull/8) proposes passing that token; it is not merged, and removal of the App requirement still needs a real workflow run. Review credentials and repository access, then exercise manual runs before relying on the schedule.
+
+The guard uses NUL-separated `awk` parsing. Its regression test fails on the tested macOS BSD `awk`, although PR #8's Ubuntu CI passes. Local steward sessions do not run this pre-push check automatically: inspect their commits before pushing.
 
 ---
 
@@ -114,11 +104,11 @@ An [`AGENTS.md`](https://agents.md) file is a short, plain-English instruction s
 | `Wiki/40_Decisions/` | *"Every decision must record its options, owner, date, reversal conditions, linked sources, and a six-month review date. Never edit a past decision — supersede it."* |
 | `Wiki/50_Meetings/` | *"One note per meeting. Capture decisions and owners, not a transcript. Cite the source transcript in Raw."* |
 
-Because the guidance lives **next to the content**, the AI inherits your company's operating rules wherever it works — the same way a good new hire picks up "how we do things here" by sitting in the right room. You're not writing one giant prompt; you're layering small, local rules. That is what turns a folder of notes into a brain.
+Because the guidance lives **next to the content**, the agent can read the company's operating rules for the folder it is working in — the same way a good new hire picks up "how we do things here" by sitting in the right room. You're not writing one giant prompt; you're layering small, local rules. That is what turns a folder of notes into a brain.
 
 The root `AGENTS.md` also carries **behavioral guardrails** — a short list of patterns the AI is told to watch for and push back on (scope creep, researching instead of deciding, giving away too much in a negotiation, dithering over a decision that's easily reversible). A brain with opinions is more useful than a brain that only answers.
 
-**Why `AGENTS.md` and not a tool-specific file?** It's the cross-tool standard, and the vault ships the small shims each tool needs so the *same* instructions work everywhere: OpenAI Codex reads `AGENTS.md` natively along the project-root-to-launch-directory path; the root guide instructs it to read applicable descendant guides before working there; Claude Code reads it through the one-line `CLAUDE.md` stubs (`@AGENTS.md` imports) sitting next to each one; Gemini CLI is pointed at it by the included `.gemini/settings.json`. Write your rules once, and any of the three agents inherits them.
+**Why `AGENTS.md` and not a tool-specific file?** It's the cross-tool standard, and the vault ships the small shims each tool needs so the *same* instructions work everywhere: OpenAI Codex reads `AGENTS.md` natively along the project-root-to-launch-directory path; the root guide instructs it to read applicable descendant guides before working there; Claude Code reads it through the one-line `CLAUDE.md` stubs (`@AGENTS.md` imports) sitting next to each one; Gemini CLI is pointed at it by the included `.gemini/settings.json`. Keep the rules in one place, and require the agent to read the guides that apply to each folder. Do not assume launching from the vault root loads every descendant guide.
 
 ---
 
@@ -152,7 +142,7 @@ Generic AI assistants ship a fixed cast of famous names. That's a parlor trick. 
 - **`/build-advisor`** — a command that reads your decision log and Raw material, works out the kinds of decisions you keep making, asks you which historical figure would best advise each one, and drafts an advisor for each, following the schema.
 - **`/advisor <name> <topic>`** — consults one of your advisors on a live question, in their voice and method, and proposes a decision-log entry.
 
-Each generated brain comes with **one worked-example advisor, chosen to fit your industry**, so you can see the pattern immediately — then replace it with your own. (Open the starter and you'll find a generic operator; a generated healthcare brain might pick a public-health pioneer, a private-equity brain a famous dealmaker.)
+Each generated brain comes with **one worked-example advisor**; model-personalized generation can choose one to fit your industry, so you can see the pattern immediately — then replace it with your own. (Open the starter and you'll find a generic operator; a generated healthcare brain might pick a public-health pioneer, a private-equity brain a famous dealmaker.)
 
 This is the differentiated idea: *a way to build your own bench*, not a borrowed one.
 
@@ -187,7 +177,7 @@ scripts/                       The generator that builds personalized vaults
 .gemini/commands/              … and for Gemini CLI
 ```
 
-Every note links to at least two others; hub notes (Start Here, Annual Strategy, Decision Log, the memory files) link to six or more. That density is deliberate — it's what makes the graph view *bloom*, and what lets an AI hop from a question to the underlying evidence.
+The templates link content notes to related notes and give hub notes several routes into the vault. This helps people and agents move from a question to supporting evidence. The generator reports wikilink counts but does not detect unresolved links; check that model-generated note titles and links resolve before sharing a vault.
 
 ### The self-coaching meta-templates
 
@@ -208,7 +198,7 @@ You don't roll this out. You build one small habit per week. The full version li
 
 - **Week 1 — Capture meetings only.** After each meeting, drop the notes into `Inbox/`. Don't organize. Just build the habit of writing it down.
 - **Week 2 — Add the decision log.** Each real choice gets a note: options, what you picked, who owns it, what would reverse it, when to review it. Five minutes each.
-- **Week 3 — Wire up an AI agent.** Open the folder in Claude Code, OpenAI Codex, or Gemini CLI. It reads every `AGENTS.md` automatically, so it already knows how your company works. Ask it to process your week's Inbox into the Wiki.
+- **Week 3 — Wire up an AI agent.** Open the folder in Claude Code, Codex, or Gemini CLI. Have it read the root guide and the applicable descendant `AGENTS.md` files before processing your week's Inbox into the Wiki; discovery differs by CLI.
 - **Week 4 — Ask your company a question, and build an advisor.** *"Why did we choose our lead vendor?"* comes back with links to the exact notes. Then run `/build-advisor` to create an advisor tuned to your decisions.
 
 ---
@@ -219,7 +209,7 @@ You don't roll this out. You build one small habit per week. The full version li
 Clone this repo, open [`skeleton/`](skeleton/) in Obsidian as a vault, and start replacing the example notes with your own. Everything — the data-flow structure, the layered `AGENTS.md` files, the memory triad, the advisor factory, the 30-day plan — is yours to keep.
 
 **2. Generate a personalized starter.**
-If you have [Claude Code](https://claude.com/claude-code), [OpenAI Codex](https://developers.openai.com/codex/cli), or [Gemini CLI](https://github.com/google-gemini/gemini-cli), this repo ships a command that builds a starter vault tailored to *your* industry in under a minute:
+If you have [Claude Code](https://claude.com/claude-code), [OpenAI Codex](https://developers.openai.com/codex/cli), or [Gemini CLI](https://github.com/google-gemini/gemini-cli), this repo ships a command that requests industry-specific substitutions and builds a starter vault:
 
 ```
 /brain-blueprint "consumer goods" 200
@@ -227,7 +217,7 @@ If you have [Claude Code](https://claude.com/claude-code), [OpenAI Codex](https:
 /brain-blueprint "financial services" 30 "PE fund"
 ```
 
-It writes a fresh, industry-flavored vault (40+ interlinked notes, every folder's `AGENTS.md` written for your context, a memory triad seeded with plausible state, and an industry-fit advisor) to `~/Showcase/blueprints/` and zips it up to hand over. Open it in Obsidian and watch the graph fill in from nothing.
+It writes a fresh vault of interlinked sample notes to `~/Showcase/blueprints/` by default and creates a ZIP unless disabled. A successful model response supplies industry-flavored content; fallback and `--no-llm` runs use generic examples. The seeded state, metrics and decisions are fictional, not evidence about your company. Replace them before using the vault operationally. In Codex, use `$brain-blueprint` for the examples above.
 
 ---
 
@@ -235,7 +225,7 @@ It writes a fresh, industry-flavored vault (40+ interlinked notes, every folder'
 
 If you saw this at a live demo, the showcase vault was a six-person **mining exploration** company running an eight-country portfolio. That story is a worked example, nothing more — the architecture is deliberately industry-neutral. Here is exactly what changes for your industry, and what never does.
 
-**Changes with your industry — and `/brain-blueprint` re-seeds all of it automatically:**
+**Fields model-personalized generation can seed for your industry:**
 
 - Company name, role titles, KPI names, and glossary terms across the sample notes
 - The decision topics in `Wiki/40_Decisions/` (a clinic chain debates site openings; a PE fund debates exits; an exploration company debates country entries)
@@ -265,19 +255,44 @@ Rule of thumb: **content is industry-specific; structure is not.** If you find y
 
 ## How it's built (for the technically curious)
 
-The generator is intentionally **template-first and LLM-light**, because speed matters — a personalized vault must appear in under a minute.
+The generator is **template-first and LLM-light**:
 
-- **One AI call, not forty.** A single agent-CLI call returns *only* the industry-specific substitutions (company name, role titles, decision topics, KPI names, glossary terms, a state snapshot, the panorama's section headers, and one industry-fit advisor) as compact JSON. No per-note AI calls.
-- **The templates do the writing.** A Node script weaves those substitutions into 40+ notes and cross-links them deterministically, so link density and structure are guaranteed regardless of what the model returns.
-- **It never hard-fails.** If the AI call is slow or returns malformed JSON, a built-in generic dataset takes over and the vault still generates instantly — important when you're generating live in front of someone on a phone hotspot. The call's timeout sits *below* the 60-second budget, so even a worst-case slow response falls back rather than blowing the deadline.
-- **A speed detail that matters.** For structured substitution the model doesn't need to "think out loud," so where a CLI supports it the extraction call runs with extended thinking disabled (Claude Code: `MAX_THINKING_TOKENS=0`) — turning it off roughly halves the wall-clock time, the difference between comfortably under a minute and not.
-- **Why Node (plain ESM), not Python or TypeScript?** The task is "copy ~77 files + one CLI call + zip." Node has a fast cold start, is already installed alongside every major agent CLI, and plain `.mjs` needs **no build step** — nothing between "run" and "done." The AI call dominates wall time; the file work is instant.
-- **Why a CLI (not a provider SDK)?** The generator shells out to whichever agent CLI you already use — `claude`, `codex`, or `gemini` — so it rides your existing authentication and default model. No API key to manage, no provider lock-in; `--cli` and `--model` override the defaults when you want to.
+- **One optional CLI call.** It requests compact JSON substitutions, rather than making one model call per note. `--no-llm` skips that call entirely.
+- **Templates write the files.** Plain Node.js ESM generates the folders, notes, commands and workflow. There is no build step.
+- **Fallback handles some model failures.** Missing CLIs, a failed invocation, timeout or JSON parsing error can select generic data. The CLI timeout is 56 seconds; this is not a guarantee that the whole run finishes within a minute. Invalid nested model data, filesystem errors and missing archive tools can still fail generation.
+- **Output remains inspectable.** The summary reports the data source, files, note/link counts, output path and archive path. It does not check unresolved links. Model-provided names can affect links; validate the generated vault before sharing it.
 
-Typical generation: **40–45 seconds**, 77 files, ~360 wikilinks, zero unresolved links, zero placeholder text.
+### CLI scope
+
+The generator has adapters for Claude Code, Codex and Gemini. Generated vaults include `build-advisor` and `advisor` definitions for all three: slash commands for Claude/Gemini and `$build-advisor` / `$advisor` skills for Codex. **The upkeep steward and its permission settings are Claude Code only.** Shared Markdown instructions do not make tool-specific permissions portable.
+
+### Validation and known limits
+
+From the repository root:
+
+```bash
+node --check scripts/generate.mjs
+python3 scripts/test-generator.py
+bash scripts/test-steward-guard.sh
+```
+
+The Python regression script requires Python 3.11+ and Node.js. It uses a stub Gemini executable, checks serialized command prompts and folder guidance, and compares a regenerated generic skeleton with committed templates after normalizing dates. It does not call a live model.
+
+At `main` revision `c685631`, the generator regression passed during the 2026-11-09 readiness check. The steward guard test passed its three allowed-change cases but failed all 15 denial cases on macOS with BSD `awk`. That local guard is not verified safe on that platform. [PR #8's Ubuntu CI](https://github.com/wilsonhj/company-brain-starter/actions/runs/41330325050) passed its syntax and guard checks; it is evidence for that Linux PR run, not for current-main macOS behavior.
+
+[PR #8](https://github.com/wilsonhj/company-brain-starter/pull/8) remains open. Its proposed changes include balanced JSON extraction from CLI output, model/CLI compatibility handling, explicit workflow-token wiring and a root CI workflow. Current `main` still uses first/last-brace JSON slicing and selects a CLI independently of a pinned model. Use the explicit matching `--cli` and `--model` options, or omit the model pin. Live CLI generation and automated stewardship need separate validation.
+
+### Relationship to Custom Agent Harness
+
+[Custom Agent Harness](https://github.com/wilsonhj/custom-agent-harness) is a separate runtime project. A possible future boundary is for a harness to execute work using a Company Brain vault as shared context. This repository does not currently contain that integration, and its generator or steward does not use the custom harness.
+
+### Attribution
+
+This fork builds on the MIT-licensed [Company Brain Starter by spacegeologist](https://github.com/spacegeologist/company-brain-starter). The original starter supplies the vault and template-first approach; this fork extends the operating Dashboard, agent guidance, generator checks and stewardship work. Retain the upstream license and contributor attribution when reusing it.
 
 ---
 
 ## License
 
 MIT — see [LICENSE](LICENSE). Use it, fork it, make your company smarter.
+
